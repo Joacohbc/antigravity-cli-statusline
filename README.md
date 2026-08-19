@@ -1,7 +1,6 @@
 # Antigravity CLI Status Line ⚡
 
 [![Release](https://img.shields.io/github/v/release/Joacohbc/antigravity-cli-statusline)](https://github.com/Joacohbc/antigravity-cli-statusline/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [English](README.md) | [Español](README.es.md)
 
