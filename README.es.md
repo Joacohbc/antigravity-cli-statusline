@@ -5,31 +5,31 @@
 
 [English](README.md) | [Español](README.es.md)
 
-A lightweight, standalone status line for Google Antigravity CLI (`agy`) built with Go. Features sub-millisecond execution, rich Nerd Font glyphs, smooth Unicode context bars, theme palettes, and real-time quota tracking.
+Status line ultrarrápida y ligera para Google Antigravity CLI (`agy`) desarrollada en Go. Ofrece ejecución en submilisegundos, iconos Nerd Fonts, barra de contexto Unicode precisa, temas de colores y monitoreo de cuotas en tiempo real.
 
 ---
 
-## ⚡ Quick Install
+## ⚡ Instalación Rápida
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | sh
 ```
 
-Pin a specific version:
+Fijar una versión específica:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | VERSION=v1.0.0 sh
 ```
 
 ---
 
-## 📸 Preview
+## 📸 Previsualización
 
-### Wide Mode (Single line)
+### Modo Wide (1 sola línea)
 ```text
 󰚩 READY ╱ 🤖 Gemini 3.7 Flash ╱  main  │  🧠 ·········· 2.7% · 󰈙 0 · 󰒋 0 · 󰥔 75.6% (5h) · 󰃭 89.6% (7d) · 󰌾 OFF
 ```
 
-### Standard Mode (Framed 2-lines)
+### Modo Estándar (2 líneas enmarcadas)
 ```text
 ╭─ 󰚩 READY ╱ 🤖 Claude Sonnet 4.6 ╱  main
 ╰─ 🧠 ████▊····· 48.5% · 󰈙 3 · 󰮝 1 · 󰒋 2 · 󰥔 98.2% (5h) · 󰃭 99.4% (7d) · 󰌾 ON
@@ -37,46 +37,52 @@ curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline
 
 ---
 
-## 🛠️ Quick Commands
+## 🛠️ Comandos Frecuentes
 
 ```bash
-# Preview themes interactively
+# Previsualizar temas en la terminal
 statusline preview --theme catppuccin
 statusline --list-themes
 
-# Change active theme
+# Cambiar el tema de color
 statusline config set theme.palette catppuccin
-# Available: catppuccin, tokyonight, dracula, nord, gruvbox, default, ascii, plain, no-color
+# Temas disponibles: catppuccin, tokyonight, dracula, nord, gruvbox, default, ascii, plain, no-color
 
-# Switch layout (wide or framed)
+# Cambiar diseño a 1 sola línea (wide)
 statusline config set layout.style wide
 
-# Toggle modules
+# Activar o desactivar módulos
 statusline config set modules.sandbox false
 statusline config set modules.weekly_usage true
 
-# Show active config file
+# Ver configuración activa
 statusline config path
 statusline config show
 ```
 
 ---
 
-## Antigravity CLI Integration
+## 🔌 Integración con Antigravity CLI
 
-Add to `~/.gemini/antigravity-cli/settings.json`:
+Agrega a `~/.gemini/antigravity-cli/settings.json`:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "/home/user/.gemini/antigravity-cli/statusline",
+    "command": "~/.gemini/antigravity-cli/statusline",
     "enabled": true
   }
 }
 ```
 
-Or toggle it live inside any active Antigravity CLI session:
+O actívalo en vivo dentro de cualquier sesión activa de Antigravity CLI:
 ```text
 /statusline ~/.gemini/antigravity-cli/statusline
 ```
+
+---
+
+## 📄 Licencia
+
+MIT © [Joacohbc](https://github.com/Joacohbc)
