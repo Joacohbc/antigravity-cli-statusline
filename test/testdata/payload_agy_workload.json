@@ -1,0 +1,60 @@
+{
+  "cwd": "/home/developer/workspace/antigravity-cli",
+  "session_id": "sess-realworld-987654",
+  "conversation_id": "conv-realworld-123456",
+  "transcript_path": "/home/developer/.antigravity/transcripts/conv-realworld-123456.json",
+  "model": {
+    "id": "gemini-3.7-pro",
+    "display_name": "Gemini 3.7 Pro"
+  },
+  "workspace": {
+    "current_dir": "/home/developer/workspace/antigravity-cli",
+    "project_dir": "/home/developer/workspace"
+  },
+  "version": "2.5.0",
+  "context_window": {
+    "total_input_tokens": 145000,
+    "total_output_tokens": 18000,
+    "context_window_size": 200000,
+    "used_percentage": 81.5,
+    "remaining_percentage": 18.5,
+    "current_usage": {
+      "input_tokens": 5200,
+      "output_tokens": 1100,
+      "cache_creation_input_tokens": 1000,
+      "cache_read_input_tokens": 4000
+    }
+  },
+  "exceeds_200k_tokens": false,
+  "product": "Antigravity CLI",
+  "quota": {
+    "gemini": {
+      "remaining_fraction": 0.45,
+      "reset_time": "2026-08-19T04:00:00Z",
+      "reset_in_seconds": 14400
+    }
+  },
+  "agent_state": "working",
+  "vcs": {
+    "type": "git",
+    "branch": "feat/m4-e2e-testing",
+    "client": "git-cli",
+    "dirty": true
+  },
+  "sandbox": {
+    "enabled": true,
+    "allow_network": false
+  },
+  "artifact_count": 7,
+  "plan_tier": "enterprise",
+  "email": "lead-architect@example.com",
+  "pending_input_count": 0,
+  "tool_confirmation_pending": false,
+  "task_count": 12,
+  "subagents": ["planner", "coder", "reviewer", "security-audit"],
+  "terminal_width": 140,
+  "execution_mode": "EXEC",
+  "vim": {
+    "mode": "VISUAL"
+  }
+}

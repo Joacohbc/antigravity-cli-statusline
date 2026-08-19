@@ -1,0 +1,60 @@
+{
+  "cwd": "/home/developer/workspace/antigravity-cli",
+  "session_id": "sess-98765-abcdef",
+  "conversation_id": "conv-12345-uvwxyz",
+  "transcript_path": "/home/developer/.antigravity/transcripts/conv-12345.json",
+  "model": {
+    "id": "gemini-3.7-flash",
+    "display_name": "Gemini 3.7 Flash"
+  },
+  "workspace": {
+    "current_dir": "/home/developer/workspace/antigravity-cli",
+    "project_dir": "/home/developer/workspace"
+  },
+  "version": "2.4.0",
+  "context_window": {
+    "total_input_tokens": 45000,
+    "total_output_tokens": 5000,
+    "context_window_size": 200000,
+    "used_percentage": 25.0,
+    "remaining_percentage": 75.0,
+    "current_usage": {
+      "input_tokens": 40000,
+      "output_tokens": 5000,
+      "cache_creation_input_tokens": 2000,
+      "cache_read_input_tokens": 3000
+    }
+  },
+  "exceeds_200k_tokens": false,
+  "product": "Antigravity CLI",
+  "quota": {
+    "gemini-3.7-flash": {
+      "remaining_fraction": 0.85,
+      "reset_time": "2026-08-19T00:00:00Z",
+      "reset_in_seconds": 3600
+    }
+  },
+  "agent_state": "working",
+  "vcs": {
+    "type": "git",
+    "branch": "feat/statusline-modernize",
+    "client": "git-cli",
+    "dirty": true
+  },
+  "sandbox": {
+    "enabled": true,
+    "allow_network": true
+  },
+  "artifact_count": 5,
+  "plan_tier": "pro",
+  "email": "developer@example.com",
+  "pending_input_count": 1,
+  "tool_confirmation_pending": false,
+  "task_count": 4,
+  "subagents": ["worker-1", "worker-2", "worker-3"],
+  "terminal_width": 140,
+  "execution_mode": "planning",
+  "vim": {
+    "mode": "NORMAL"
+  }
+}

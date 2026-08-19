@@ -1,0 +1,28 @@
+# Binaries & build artifacts
+/statusline
+*.exe
+*.test
+*.out
+bin/
+dist/
+
+# Test & Debug Dumps
+*.log
+/tmp/
+*_raw.json
+*_payload.json
+
+# Environment & Sensitive Files
+.env
+.env.*
+*.pem
+*.key
+*.token
+
+# Devcontainer metadata
+.dc_*/
+devcontainer.config.json
+
+# OS metadata
+.DS_Store
+Thumbs.db

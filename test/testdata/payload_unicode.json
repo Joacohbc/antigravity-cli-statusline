@@ -1,0 +1,40 @@
+{
+  "cwd": "/home/developer/workspace/antigravity-cli",
+  "session_id": "sess-unicode-12345",
+  "conversation_id": "conv-unicode-67890",
+  "model": {
+    "id": "gemini-3.7-pro-日本語-🚀",
+    "display_name": "Gemini 3.7 Pro (日本語・UTF8 🚀✨)"
+  },
+  "workspace": {
+    "current_dir": "/home/developer/プロジェクト/ステータスライン",
+    "project_dir": "/home/developer/プロジェクト"
+  },
+  "version": "v1.2.0-üñîçødë",
+  "context_window": {
+    "total_input_tokens": 55000,
+    "total_output_tokens": 8000,
+    "context_window_size": 200000,
+    "used_percentage": 31.5,
+    "remaining_percentage": 68.5,
+    "current_usage": {
+      "input_tokens": 3000,
+      "output_tokens": 500
+    }
+  },
+  "agent_state": "working",
+  "vcs": {
+    "type": "git",
+    "branch": "feat/🌿-feature-äöü-🚀-branch",
+    "client": "git-cli",
+    "dirty": true
+  },
+  "artifact_count": 2,
+  "task_count": 5,
+  "subagents": ["サブエージェント-1", "worker-🚀"],
+  "terminal_width": 120,
+  "execution_mode": "開発モード",
+  "vim": {
+    "mode": "INSERT"
+  }
+}

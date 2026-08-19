@@ -1,0 +1,17 @@
+{
+  "cwd": "/home/user/\u001b[31minjected-path\u001b[0m\r\n/evil",
+  "conversation_id": "conv-\u0000\u0007\u001b]0;PwnedTerminal\u0007123",
+  "model": {
+    "id": "gemini-pro\u001b[2J\u001b[H",
+    "display_name": "\u001b[1;33mGemini 3.7 Flash\u001b[0m\nNew line"
+  },
+  "vcs": {
+    "type": "git",
+    "branch": "feat/\u001b[31mred-branch\u001b[0m\u001b]0;TitleHack\u0007\u0000--evil",
+    "client": "git\r\ncli",
+    "dirty": true
+  },
+  "agent_state": "working\u001b[?25l",
+  "execution_mode": "planning\u001b[0m\t",
+  "terminal_width": 100
+}

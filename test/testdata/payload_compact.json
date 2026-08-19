@@ -1,0 +1,26 @@
+{
+  "model": {
+    "id": "gemini-3.7-flash",
+    "display_name": "Gemini Flash"
+  },
+  "context_window": {
+    "total_input_tokens": 12000,
+    "total_output_tokens": 1500,
+    "context_window_size": 200000,
+    "used_percentage": 6.8,
+    "remaining_percentage": 93.2
+  },
+  "agent_state": "idle",
+  "vcs": {
+    "type": "git",
+    "branch": "main",
+    "dirty": false
+  },
+  "artifact_count": 1,
+  "task_count": 2,
+  "subagents": 2,
+  "terminal_width": 60,
+  "vim": {
+    "mode": "NORMAL"
+  }
+}
