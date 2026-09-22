@@ -26,3 +26,6 @@ devcontainer.config.json
 # OS metadata
 .DS_Store
 Thumbs.db
+
+.claude/skills/
+.agents/skills/
