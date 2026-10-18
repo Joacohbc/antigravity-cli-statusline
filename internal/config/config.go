@@ -34,9 +34,12 @@ type IconsConfig struct {
 	Artifacts        string `json:"artifacts,omitempty"`
 	Subagents        string `json:"subagents,omitempty"`
 	Tasks            string `json:"tasks,omitempty"`
+	Terminal         string `json:"terminal,omitempty"`
 	Terminals        string `json:"terminals,omitempty"`
 	MCP              string `json:"mcp,omitempty"`
+	Skill            string `json:"skill,omitempty"`
 	Skills           string `json:"skills,omitempty"`
+	Plugin           string `json:"plugin,omitempty"`
 	Plugins          string `json:"plugins,omitempty"`
 	Attention        string `json:"attention,omitempty"`
 	Sandbox          string `json:"sandbox,omitempty"`
@@ -118,9 +121,12 @@ func DefaultConfig() *Config {
 				Artifacts:        "󰈙",
 				Subagents:        "󰮝",
 				Tasks:            "󰒋",
+				Terminal:         "󰆍",
 				Terminals:        "󰆍",
 				MCP:              "󱘖",
+				Skill:            "󰑬",
 				Skills:           "󰑬",
+				Plugin:           "󰏖",
 				Plugins:          "󰏖",
 				Attention:        "󱅝",
 				Sandbox:          "󰌾",
@@ -349,14 +355,17 @@ func SetProperty(targetPath string, key string, val string) (string, error) {
 		cfg.Theme.Icons.Compacting = val
 	case "theme.icons.error", "icons.error":
 		cfg.Theme.Icons.Error = val
-	case "theme.icons.terminal", "icons.terminal":
+	case "theme.icons.terminal", "icons.terminal", "theme.icons.terminals", "icons.terminals":
 		cfg.Theme.Icons.Terminal = val
+		cfg.Theme.Icons.Terminals = val
 	case "theme.icons.mcp", "icons.mcp":
 		cfg.Theme.Icons.MCP = val
-	case "theme.icons.skill", "icons.skill":
+	case "theme.icons.skill", "icons.skill", "theme.icons.skills", "icons.skills":
 		cfg.Theme.Icons.Skill = val
-	case "theme.icons.plugin", "icons.plugin":
+		cfg.Theme.Icons.Skills = val
+	case "theme.icons.plugin", "icons.plugin", "theme.icons.plugins", "icons.plugins":
 		cfg.Theme.Icons.Plugin = val
+		cfg.Theme.Icons.Plugins = val
 	case "theme.icons.attention", "icons.attention":
 		cfg.Theme.Icons.Attention = val
 
