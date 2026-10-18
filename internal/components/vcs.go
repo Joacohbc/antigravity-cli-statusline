@@ -6,7 +6,7 @@ import (
 	"github.com/joaco/antigravity-statusline/internal/theme"
 )
 
-func RenderVCSBadge(vcs payload.VCSInfo, p theme.Palette, icons config.IconsConfig) string {
+func RenderVCSBadge(vcs payload.VCSInfo, palette theme.Palette, icons config.IconsConfig) string {
 	if vcs.Branch == "" {
 		return ""
 	}
@@ -26,9 +26,9 @@ func RenderVCSBadge(vcs payload.VCSInfo, p theme.Palette, icons config.IconsConf
 		dirtyIcon = icons.Dirty
 	}
 
-	branchColor := p.Branch
+	branchColor := palette.Branch
 	if vcs.Dirty {
-		branchColor = p.BranchDirty
+		branchColor = palette.BranchDirty
 	}
 
 	branchText := theme.Style(branchColor, icon+" "+branch)
@@ -37,6 +37,6 @@ func RenderVCSBadge(vcs payload.VCSInfo, p theme.Palette, icons config.IconsConf
 		return branchText
 	}
 
-	dirtyMarker := theme.Style(p.DirtyMarker, dirtyIcon)
+	dirtyMarker := theme.Style(palette.DirtyMarker, dirtyIcon)
 	return branchText + dirtyMarker
 }

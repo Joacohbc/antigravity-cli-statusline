@@ -124,12 +124,12 @@ func Style(styleCode string, text string) string {
 	if !ColorEnabled() || styleCode == "" {
 		return text
 	}
-	var b strings.Builder
-	b.Grow(len(styleCode) + len(text) + len(Reset))
-	b.WriteString(styleCode)
-	b.WriteString(text)
-	b.WriteString(Reset)
-	return b.String()
+	var builder strings.Builder
+	builder.Grow(len(styleCode) + len(text) + len(Reset))
+	builder.WriteString(styleCode)
+	builder.WriteString(text)
+	builder.WriteString(Reset)
+	return builder.String()
 }
 
 func Paint(fgCode string, text string) string {
@@ -147,74 +147,93 @@ func Capsule(fgColor string, bgColor string, capFgColor string, text string) str
 	body := Style(bgColor+fgColor+Bold, " "+text+" ")
 	rightCap := Style(capFgColor, PillRight)
 
-	var b strings.Builder
-	b.Grow(len(leftCap) + len(body) + len(rightCap))
-	b.WriteString(leftCap)
-	b.WriteString(body)
-	b.WriteString(rightCap)
-	return b.String()
+	var builder strings.Builder
+	builder.Grow(len(leftCap) + len(body) + len(rightCap))
+	builder.WriteString(leftCap)
+	builder.WriteString(body)
+	builder.WriteString(rightCap)
+	return builder.String()
 }
 
-func Clean(s string) string {
-	if s == "" {
-		return ""
-	}
-
-	hasEscape := false
-	for i := 0; i < len(s); i++ {
-		if s[i] == 0x1b || (s[i] < 32 && s[i] != '\t' && s[i] != '\n') {
-			hasEscape = true
+func skipCSISequence(input string, currentIndex int) int {
+	inputLength := len(input)
+	for currentIndex < inputLength {
+		character := input[currentIndex]
+		isTerminator := (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') || character == '~'
+		currentIndex++
+		if isTerminator {
 			break
 		}
 	}
-	if !hasEscape {
-		return s
-	}
+	return currentIndex
+}
 
-	var b strings.Builder
-	b.Grow(len(s))
-	i := 0
-	n := len(s)
-	for i < n {
-		if s[i] == 0x1b {
-			i++
-			if i >= n {
-				break
-			}
-			if s[i] == '[' {
-				i++
-				for i < n && !((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') || s[i] == '~') {
-					i++
-				}
-				if i < n {
-					i++
-				}
-			} else if s[i] == ']' {
-				i++
-				for i < n {
-					if s[i] == 0x07 {
-						i++
-						break
-					}
-					if s[i] == 0x1b && i+1 < n && s[i+1] == '\\' {
-						i += 2
-						break
-					}
-					i++
-				}
-			} else if s[i] == '(' || s[i] == ')' {
-				i += 2
-			} else {
-				i++
-			}
-		} else if s[i] < 32 && s[i] != '\t' && s[i] != '\n' {
-			i++
-		} else {
-			b.WriteByte(s[i])
-			i++
+func skipOSCSequence(input string, currentIndex int) int {
+	inputLength := len(input)
+	for currentIndex < inputLength {
+		if input[currentIndex] == 0x07 {
+			return currentIndex + 1
+		}
+		isStringTerminator := input[currentIndex] == 0x1b && currentIndex+1 < inputLength && input[currentIndex+1] == '\\'
+		if isStringTerminator {
+			return currentIndex + 2
+		}
+		currentIndex++
+	}
+	return currentIndex
+}
+
+func hasEscapeOrControl(input string) bool {
+	for index := 0; index < len(input); index++ {
+		character := input[index]
+		if character == 0x1b || (character < 32 && character != '\t' && character != '\n') {
+			return true
 		}
 	}
-	return b.String()
+	return false
+}
+
+func Clean(input string) string {
+	if input == "" || !hasEscapeOrControl(input) {
+		return input
+	}
+
+	var builder strings.Builder
+	builder.Grow(len(input))
+	currentIndex := 0
+	inputLength := len(input)
+
+	for currentIndex < inputLength {
+		character := input[currentIndex]
+
+		if character == 0x1b {
+			currentIndex++
+			if currentIndex >= inputLength {
+				break
+			}
+			switch input[currentIndex] {
+			case '[':
+				currentIndex = skipCSISequence(input, currentIndex+1)
+			case ']':
+				currentIndex = skipOSCSequence(input, currentIndex+1)
+			case '(', ')':
+				currentIndex += 2
+			default:
+				currentIndex++
+			}
+			continue
+		}
+
+		if character < 32 && character != '\t' && character != '\n' {
+			currentIndex++
+			continue
+		}
+
+		builder.WriteByte(character)
+		currentIndex++
+	}
+
+	return builder.String()
 }
 
 func RuneWidth(r rune) int {
@@ -287,6 +306,12 @@ type Palette struct {
 	Separator   string
 	Dim         string
 	Highlight   string
+	Attention   string
+	Warning     string
+	Error       string
+	MCP         string
+	Skill       string
+	Terminal    string
 }
 
 func GetPalette(name string) Palette {
@@ -320,6 +345,12 @@ func GetPalette(name string) Palette {
 			Separator:   FgRGB(86, 95, 137),
 			Dim:         FgRGB(86, 95, 137),
 			Highlight:   FgRGB(255, 255, 255) + Bold,
+			Attention:   FgRGB(247, 118, 142) + Bold,
+			Warning:     FgRGB(224, 175, 104) + Bold,
+			Error:       FgRGB(247, 118, 142) + Bold,
+			MCP:         FgRGB(187, 154, 247) + Bold,
+			Skill:       FgRGB(122, 162, 247) + Bold,
+			Terminal:    FgRGB(158, 206, 106) + Bold,
 		}
 	case "catppuccin":
 		return Palette{
@@ -350,6 +381,12 @@ func GetPalette(name string) Palette {
 			Separator:   FgRGB(108, 112, 134),
 			Dim:         FgRGB(108, 112, 134),
 			Highlight:   FgRGB(255, 255, 255) + Bold,
+			Attention:   FgRGB(243, 139, 168) + Bold,
+			Warning:     FgRGB(249, 226, 175) + Bold,
+			Error:       FgRGB(243, 139, 168) + Bold,
+			MCP:         FgRGB(203, 166, 247) + Bold,
+			Skill:       FgRGB(137, 180, 250) + Bold,
+			Terminal:    FgRGB(166, 227, 161) + Bold,
 		}
 	case "dracula":
 		return Palette{
@@ -380,6 +417,12 @@ func GetPalette(name string) Palette {
 			Separator:   FgRGB(98, 114, 164),
 			Dim:         FgRGB(98, 114, 164),
 			Highlight:   FgRGB(255, 255, 255) + Bold,
+			Attention:   FgRGB(255, 85, 85) + Bold,
+			Warning:     FgRGB(241, 250, 140) + Bold,
+			Error:       FgRGB(255, 85, 85) + Bold,
+			MCP:         FgRGB(255, 121, 198) + Bold,
+			Skill:       FgRGB(189, 147, 249) + Bold,
+			Terminal:    FgRGB(80, 250, 123) + Bold,
 		}
 	case "nord":
 		return Palette{
@@ -410,6 +453,12 @@ func GetPalette(name string) Palette {
 			Separator:   FgRGB(76, 86, 106),
 			Dim:         FgRGB(76, 86, 106),
 			Highlight:   FgRGB(255, 255, 255) + Bold,
+			Attention:   FgRGB(191, 97, 106) + Bold,
+			Warning:     FgRGB(235, 203, 139) + Bold,
+			Error:       FgRGB(191, 97, 106) + Bold,
+			MCP:         FgRGB(180, 142, 173) + Bold,
+			Skill:       FgRGB(129, 161, 193) + Bold,
+			Terminal:    FgRGB(163, 190, 140) + Bold,
 		}
 	case "gruvbox":
 		return Palette{
@@ -440,6 +489,12 @@ func GetPalette(name string) Palette {
 			Separator:   FgRGB(146, 131, 116),
 			Dim:         FgRGB(146, 131, 116),
 			Highlight:   FgRGB(255, 255, 255) + Bold,
+			Attention:   FgRGB(251, 73, 52) + Bold,
+			Warning:     FgRGB(250, 189, 47) + Bold,
+			Error:       FgRGB(251, 73, 52) + Bold,
+			MCP:         FgRGB(211, 134, 155) + Bold,
+			Skill:       FgRGB(131, 165, 152) + Bold,
+			Terminal:    FgRGB(184, 187, 38) + Bold,
 		}
 	case "ascii", "plain", "no-color":
 		return Palette{
@@ -470,6 +525,12 @@ func GetPalette(name string) Palette {
 			Separator:   "",
 			Dim:         "",
 			Highlight:   "",
+			Attention:   "",
+			Warning:     "",
+			Error:       "",
+			MCP:         "",
+			Skill:       "",
+			Terminal:    "",
 		}
 	default:
 		return Palette{
@@ -500,6 +561,12 @@ func GetPalette(name string) Palette {
 			Separator:   FgGray,
 			Dim:         FgGray,
 			Highlight:   FgBrightWhite + Bold,
+			Attention:   FgBrightRed + Bold,
+			Warning:     FgBrightYellow + Bold,
+			Error:       FgBrightRed + Bold,
+			MCP:         FgBrightMagenta + Bold,
+			Skill:       FgBrightBlue + Bold,
+			Terminal:    FgBrightGreen + Bold,
 		}
 	}
 }

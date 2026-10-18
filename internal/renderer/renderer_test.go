@@ -1,6 +1,8 @@
 package renderer_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -211,5 +213,35 @@ func TestRenderPreview(t *testing.T) {
 	previewCompact := renderer.RenderPreview(50)
 	if strings.Contains(previewCompact, "╭─") {
 		t.Errorf("unexpected compact preview output: %s", previewCompact)
+	}
+}
+
+func TestRender_ModernAGYFeatures(t *testing.T) {
+	t.Parallel()
+
+	fixturePath := filepath.Join("..", "..", "test", "testdata", "payload_agy_modern.json")
+	data, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatalf("failed to read fixture: %v", err)
+	}
+
+	p, err := payload.ParseBytes(data)
+	if err != nil {
+		t.Fatalf("failed to parse modern payload: %v", err)
+	}
+
+	output := renderer.Render(p)
+
+	if !strings.Contains(output, "WAITING APPROVAL") {
+		t.Errorf("expected WAITING APPROVAL in output, got: %s", output)
+	}
+	if !strings.Contains(output, "[BOOST]") {
+		t.Errorf("expected [BOOST] execution mode in output, got: %s", output)
+	}
+	if !strings.Contains(output, "APPROVAL REQ") {
+		t.Errorf("expected APPROVAL REQ attention badge in output, got: %s", output)
+	}
+	if !strings.Contains(output, "ON (NET)") {
+		t.Errorf("expected ON (NET) for network enabled sandbox, got: %s", output)
 	}
 }

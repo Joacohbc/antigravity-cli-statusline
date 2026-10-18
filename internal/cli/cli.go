@@ -236,39 +236,14 @@ func (r *Runner) Execute() int {
 			}
 			activeRenderer := renderer.NewRenderer(rendererOpts...)
 
-			// Check if configPath was a file passed
-			if configPath != "" {
-				data, readErr := os.ReadFile(configPath)
-				if readErr != nil {
-					return fmt.Errorf("failed to open config file %q: %w", configPath, readErr)
+			if renderedOutput, isPayloadFile, err := tryRenderPayloadFile(configPath, widthOverride, activeRenderer, r.Err, debug); isPayloadFile {
+				if err != nil {
+					return err
 				}
-
-				if len(data) > payload.MaxPayloadSize {
-					return fmt.Errorf("failed to parse config file %q: exceeds maximum allowed size", configPath)
-				}
-
-				var probe map[string]json.RawMessage
-				if jsonErr := json.Unmarshal(data, &probe); jsonErr != nil {
-					if debug {
-						fmt.Fprintf(r.Err, "debug: parse details: %v\n", jsonErr)
-					}
-					return fmt.Errorf("failed to parse config file %q: %w", configPath, jsonErr)
-				}
-
-				if _, hasState := probe["agent_state"]; hasState || probe["context_window"] != nil || probe["model"] != nil {
-					state, parseErr := payload.Parse(strings.NewReader(string(data)))
-					if parseErr != nil {
-						if debug {
-							fmt.Fprintf(r.Err, "debug: parse details: %v\n", parseErr)
-						}
-						return fmt.Errorf("failed to parse config file %q: %w", configPath, parseErr)
-					}
-					if widthOverride > 0 {
-						state.TerminalWidth = widthOverride
-					}
-					fmt.Fprintln(r.Out, activeRenderer.Render(state))
-					return nil
-				}
+				fmt.Fprintln(r.Out, renderedOutput)
+				return nil
+			} else if err != nil {
+				return err
 			}
 
 			if previewFlag {
@@ -284,9 +259,8 @@ func (r *Runner) Execute() int {
 				return nil
 			}
 
-			// Piped stdin
 			stdinData, _ := io.ReadAll(r.In)
-			if len(stdinData) > 0 {
+			if debug && len(stdinData) > 0 {
 				_ = os.WriteFile("/tmp/agy_statusline_last_payload.json", stdinData, 0644)
 			}
 			state, parseErr := payload.Parse(bytes.NewReader(stdinData))
@@ -318,7 +292,6 @@ func (r *Runner) Execute() int {
 	pflags.BoolVar(&debug, "debug", false, "Print error details and diagnostics to stderr")
 	pflags.BoolVarP(&versionFlag, "version", "v", false, "Print version information")
 
-	// Subcommand: preview
 	previewCmd := &cobra.Command{
 		Use:   "preview",
 		Short: "Render interactive preview statusline",
@@ -341,7 +314,6 @@ func (r *Runner) Execute() int {
 		},
 	}
 
-	// Subcommand: themes
 	themesCmd := &cobra.Command{
 		Use:   "themes",
 		Short: "List all available color theme palettes",
@@ -351,7 +323,6 @@ func (r *Runner) Execute() int {
 		},
 	}
 
-	// Subcommand: version
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print version information",
@@ -361,7 +332,6 @@ func (r *Runner) Execute() int {
 		},
 	}
 
-	// Subcommand: config
 	configCmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage statusline user configuration",
@@ -433,7 +403,6 @@ func (r *Runner) Execute() int {
 	configCmd.AddCommand(configInitCmd, configShowCmd, configSetCmd, configPathCmd)
 	rootCmd.AddCommand(previewCmd, themesCmd, versionCmd, configCmd, NewInstallCmd(r.Out, r.Err))
 
-	// Pre-process single-dash long flags (e.g. -help, -version, -preview) for Unix tool compatibility
 	normalizedArgs := make([]string, len(r.Args))
 	for i, arg := range r.Args {
 		switch arg {
@@ -459,4 +428,47 @@ func (r *Runner) Execute() int {
 	}
 
 	return ExitSuccess
+}
+
+func tryRenderPayloadFile(filePath string, widthOverride int, activeRenderer *renderer.Renderer, errWriter io.Writer, isDebug bool) (string, bool, error) {
+	if filePath == "" {
+		return "", false, nil
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to open config file %q: %w", filePath, err)
+	}
+
+	if len(data) > payload.MaxPayloadSize {
+		return "", false, fmt.Errorf("failed to parse config file %q: exceeds maximum allowed size", filePath)
+	}
+
+	var rawFields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &rawFields); err != nil {
+		if isDebug {
+			fmt.Fprintf(errWriter, "debug: parse details: %v\n", err)
+		}
+		return "", false, fmt.Errorf("failed to parse config file %q: %w", filePath, err)
+	}
+
+	_, hasState := rawFields["agent_state"]
+	isPayloadFile := hasState || rawFields["context_window"] != nil || rawFields["model"] != nil
+	if !isPayloadFile {
+		return "", false, nil
+	}
+
+	state, parseErr := payload.Parse(strings.NewReader(string(data)))
+	if parseErr != nil {
+		if isDebug {
+			fmt.Fprintf(errWriter, "debug: parse details: %v\n", parseErr)
+		}
+		return "", false, fmt.Errorf("failed to parse config file %q: %w", filePath, parseErr)
+	}
+
+	if widthOverride > 0 {
+		state.TerminalWidth = widthOverride
+	}
+
+	return activeRenderer.Render(state), true, nil
 }

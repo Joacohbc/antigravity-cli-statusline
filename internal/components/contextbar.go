@@ -1,7 +1,7 @@
 package components
 
 import (
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/joaco/antigravity-statusline/internal/config"
@@ -9,57 +9,57 @@ import (
 	"github.com/joaco/antigravity-statusline/internal/theme"
 )
 
-func RenderContextBar(ctx payload.ContextWindowInfo, barConfig config.ContextBarConfig, p theme.Palette, icons config.IconsConfig) string {
+func RenderContextBar(contextInfo payload.ContextWindowInfo, barConfig config.ContextBarConfig, palette theme.Palette, icons config.IconsConfig) string {
 	barLength := barConfig.Length
 	if barLength <= 0 {
 		barLength = 10
 	}
 
-	percentage := min(100.0, max(0.0, ctx.UsedPercentage))
+	percentage := min(100.0, max(0.0, contextInfo.UsedPercentage))
 
-	colorCode := selectContextColor(percentage, barConfig, p)
+	colorCode := selectContextColor(percentage, barConfig, palette)
 	barString := buildSmoothBar(percentage, barLength)
 
-	var numBuf [16]byte
-	numSlice := strconv.AppendFloat(numBuf[:0], percentage, 'f', 1, 64)
-	numSlice = append(numSlice, '%')
-	pctFormatted := string(numSlice)
-
+	percentFormatted := fmt.Sprintf("%.1f%%", percentage)
 	coloredBar := theme.Style(colorCode, barString)
-	numHighlight := theme.Style(p.Highlight, pctFormatted)
+	numberHighlight := theme.Style(palette.Highlight, percentFormatted)
 
 	icon := theme.IconContext
 	if icons.Context != "" {
 		icon = icons.Context
 	}
 
-	var b strings.Builder
-	b.Grow(len(icon) + 1 + len(coloredBar) + 1 + len(numHighlight))
-	b.WriteString(icon)
-	b.WriteByte(' ')
-	b.WriteString(coloredBar)
-	b.WriteByte(' ')
-	b.WriteString(numHighlight)
-	return b.String()
+	var builder strings.Builder
+	builder.Grow(len(icon) + 1 + len(coloredBar) + 1 + len(numberHighlight) + 8)
+	builder.WriteString(icon)
+	builder.WriteByte(' ')
+	builder.WriteString(coloredBar)
+	builder.WriteByte(' ')
+	builder.WriteString(numberHighlight)
+	if percentage >= 85.0 {
+		builder.WriteByte(' ')
+		builder.WriteString(theme.Style(palette.Attention, "󰘚"))
+	}
+	return builder.String()
 }
 
-func selectContextColor(percentage float64, barConfig config.ContextBarConfig, p theme.Palette) string {
-	critThreshold := barConfig.CriticalThreshold
-	if critThreshold <= 0 {
-		critThreshold = 90.0
+func selectContextColor(percentage float64, barConfig config.ContextBarConfig, palette theme.Palette) string {
+	criticalThreshold := barConfig.CriticalThreshold
+	if criticalThreshold <= 0 {
+		criticalThreshold = 90.0
 	}
-	warnThreshold := barConfig.WarningThreshold
-	if warnThreshold <= 0 {
-		warnThreshold = 75.0
+	warningThreshold := barConfig.WarningThreshold
+	if warningThreshold <= 0 {
+		warningThreshold = 75.0
 	}
 
-	if percentage >= critThreshold {
-		return p.ContextCrit
+	if percentage >= criticalThreshold {
+		return palette.ContextCrit
 	}
-	if percentage >= warnThreshold {
-		return p.ContextWarn
+	if percentage >= warningThreshold {
+		return palette.ContextWarn
 	}
-	return p.ContextOK
+	return palette.ContextOK
 }
 
 func buildSmoothBar(percentage float64, totalSegments int) string {
@@ -71,14 +71,14 @@ func buildSmoothBar(percentage float64, totalSegments int) string {
 	builder.Grow(totalSegments * 4)
 
 	limit := min(fullBlocks, totalSegments)
-	for i := range limit {
-		_ = i
+	for index := range limit {
+		_ = index
 		builder.WriteString(theme.BlockFull)
 	}
 
 	if fullBlocks < totalSegments {
 		builder.WriteString(selectSubBlock(remainder))
-		for i := fullBlocks + 1; i < totalSegments; i++ {
+		for index := fullBlocks + 1; index < totalSegments; index++ {
 			builder.WriteString(theme.BlockEmpty)
 		}
 	}

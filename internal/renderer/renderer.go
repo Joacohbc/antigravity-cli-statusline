@@ -26,41 +26,41 @@ type RenderConfig struct {
 }
 
 func DefaultRenderConfig() RenderConfig {
-	userCfg := config.DefaultConfig()
+	userConfig := config.DefaultConfig()
 	return RenderConfig{
 		Width:      0,
 		Theme:      theme.DefaultTheme(),
 		Mode:       LayoutAuto,
-		UserConfig: userCfg,
+		UserConfig: userConfig,
 	}
 }
 
 type Option func(*RenderConfig)
 
 func WithWidth(width int) Option {
-	return func(c *RenderConfig) {
-		c.Width = width
+	return func(renderConfig *RenderConfig) {
+		renderConfig.Width = width
 	}
 }
 
-func WithTheme(t theme.Theme) Option {
-	return func(c *RenderConfig) {
-		c.Theme = t
+func WithTheme(selectedTheme theme.Theme) Option {
+	return func(renderConfig *RenderConfig) {
+		renderConfig.Theme = selectedTheme
 	}
 }
 
 func WithMode(mode LayoutMode) Option {
-	return func(c *RenderConfig) {
-		c.Mode = mode
+	return func(renderConfig *RenderConfig) {
+		renderConfig.Mode = mode
 	}
 }
 
-func WithUserConfig(uc *config.Config) Option {
-	return func(c *RenderConfig) {
-		if uc != nil {
-			c.UserConfig = uc
-			if uc.Theme.Palette != "" {
-				c.Theme = theme.NamedTheme(uc.Theme.Palette)
+func WithUserConfig(userConfig *config.Config) Option {
+	return func(renderConfig *RenderConfig) {
+		if userConfig != nil {
+			renderConfig.UserConfig = userConfig
+			if userConfig.Theme.Palette != "" {
+				renderConfig.Theme = theme.NamedTheme(userConfig.Theme.Palette)
 			}
 		}
 	}
@@ -70,27 +70,27 @@ type Renderer struct {
 	cfg RenderConfig
 }
 
-func NewRenderer(opts ...Option) *Renderer {
-	cfg := DefaultRenderConfig()
-	for _, opt := range opts {
-		if opt != nil {
-			opt(&cfg)
+func NewRenderer(options ...Option) *Renderer {
+	renderConfig := DefaultRenderConfig()
+	for _, option := range options {
+		if option != nil {
+			option(&renderConfig)
 		}
 	}
-	return &Renderer{cfg: cfg}
+	return &Renderer{cfg: renderConfig}
 }
 
 var defaultRenderer = NewRenderer()
 
-func Render(p *payload.StatePayload) string {
-	return defaultRenderer.Render(p)
+func Render(statePayload *payload.StatePayload) string {
+	return defaultRenderer.Render(statePayload)
 }
 
 func RenderPreview(width int) string {
 	if width <= 0 {
 		width = 100
 	}
-	sample := &payload.StatePayload{
+	samplePayload := &payload.StatePayload{
 		AgentState:    "working",
 		TerminalWidth: width,
 		Model: payload.ModelInfo{
@@ -121,44 +121,44 @@ func RenderPreview(width int) string {
 		},
 	}
 
-	r := NewRenderer(WithWidth(width))
-	return r.Render(sample)
+	activeRenderer := NewRenderer(WithWidth(width))
+	return activeRenderer.Render(samplePayload)
 }
 
-func (r *Renderer) Render(p *payload.StatePayload) string {
-	if r == nil {
-		r = defaultRenderer
+func (rendererInstance *Renderer) Render(statePayload *payload.StatePayload) string {
+	if rendererInstance == nil {
+		rendererInstance = defaultRenderer
 	}
 
-	if p == nil {
-		p = payload.NewDefaultStatePayload()
+	if statePayload == nil {
+		statePayload = payload.NewDefaultStatePayload()
 	}
 
-	uc := r.cfg.UserConfig
-	if uc == nil {
-		uc = config.DefaultConfig()
+	userConfig := rendererInstance.cfg.UserConfig
+	if userConfig == nil {
+		userConfig = config.DefaultConfig()
 	}
 
-	width := r.cfg.Width
+	width := rendererInstance.cfg.Width
 	if width <= 0 {
-		width = p.TerminalWidth
+		width = statePayload.TerminalWidth
 	}
 	if width <= 0 {
 		width = payload.DefaultTerminalWidth
 	}
 
-	wideBreak := uc.Layout.WideBreakpoint
-	if wideBreak <= 0 {
-		wideBreak = 120
+	wideBreakpoint := userConfig.Layout.WideBreakpoint
+	if wideBreakpoint <= 0 {
+		wideBreakpoint = 120
 	}
-	stdBreak := uc.Layout.StandardBreakpoint
-	if stdBreak <= 0 {
-		stdBreak = 80
+	standardBreakpoint := userConfig.Layout.StandardBreakpoint
+	if standardBreakpoint <= 0 {
+		standardBreakpoint = 80
 	}
 
-	mode := r.cfg.Mode
+	mode := rendererInstance.cfg.Mode
 	if mode == LayoutAuto {
-		styleLower := strings.ToLower(strings.TrimSpace(uc.Layout.Style))
+		styleLower := strings.ToLower(strings.TrimSpace(userConfig.Layout.Style))
 		switch styleLower {
 		case "wide", "single-line":
 			mode = LayoutWide
@@ -166,9 +166,9 @@ func (r *Renderer) Render(p *payload.StatePayload) string {
 			mode = LayoutCompact
 		default:
 			switch {
-			case width >= wideBreak:
+			case width >= wideBreakpoint:
 				mode = LayoutWide
-			case width >= stdBreak:
+			case width >= standardBreakpoint:
 				mode = LayoutStandard
 			default:
 				mode = LayoutCompact
@@ -176,166 +176,176 @@ func (r *Renderer) Render(p *payload.StatePayload) string {
 		}
 	}
 
-	palette := r.cfg.Theme.Palette
+	palette := rendererInstance.cfg.Theme.Palette
 
 	switch mode {
 	case LayoutWide:
-		return r.renderWideLayout(p, uc, palette)
+		return rendererInstance.renderWideLayout(statePayload, userConfig, palette)
 	case LayoutStandard:
-		return r.renderStandardLayout(p, uc, palette)
+		return rendererInstance.renderStandardLayout(statePayload, userConfig, palette)
 	case LayoutCompact:
-		return r.renderCompactLayout(p, uc, palette)
+		return rendererInstance.renderCompactLayout(statePayload, userConfig, palette)
 	default:
-		return r.renderStandardLayout(p, uc, palette)
+		return rendererInstance.renderStandardLayout(statePayload, userConfig, palette)
 	}
 }
 
-func (r *Renderer) renderWideLayout(p *payload.StatePayload, uc *config.Config, palette theme.Palette) string {
-	line1 := r.buildHeaderLine(p, uc, palette)
-	line2 := r.buildMetricsLine(p, uc, palette, uc.ContextBar.Length)
+func (rendererInstance *Renderer) renderWideLayout(statePayload *payload.StatePayload, userConfig *config.Config, palette theme.Palette) string {
+	line1 := rendererInstance.buildHeaderLine(statePayload, userConfig, palette)
+	line2 := rendererInstance.buildMetricsLine(statePayload, userConfig, palette, userConfig.ContextBar.Length)
 
-	sepStr := "  " + theme.SepPipe + "  "
-	sep := theme.Style(palette.Separator, sepStr)
+	separatorString := "  " + theme.SepPipe + "  "
+	separator := theme.Style(palette.Separator, separatorString)
 
-	var b strings.Builder
-	b.Grow(len(line1) + len(sep) + len(line2))
-	b.WriteString(line1)
-	b.WriteString(sep)
-	b.WriteString(line2)
-	return b.String()
+	var builder strings.Builder
+	builder.Grow(len(line1) + len(separator) + len(line2))
+	builder.WriteString(line1)
+	builder.WriteString(separator)
+	builder.WriteString(line2)
+	return builder.String()
 }
 
-func (r *Renderer) renderStandardLayout(p *payload.StatePayload, uc *config.Config, palette theme.Palette) string {
-	line1 := r.buildHeaderLine(p, uc, palette)
-	line2 := r.buildMetricsLine(p, uc, palette, uc.ContextBar.Length)
+func (rendererInstance *Renderer) renderStandardLayout(statePayload *payload.StatePayload, userConfig *config.Config, palette theme.Palette) string {
+	line1 := rendererInstance.buildHeaderLine(statePayload, userConfig, palette)
+	line2 := rendererInstance.buildMetricsLine(statePayload, userConfig, palette, userConfig.ContextBar.Length)
 
 	topPrefix := "╭─ "
-	if uc.Layout.FrameTop != "" {
-		topPrefix = uc.Layout.FrameTop
+	if userConfig.Layout.FrameTop != "" {
+		topPrefix = userConfig.Layout.FrameTop
 	}
 	bottomPrefix := "╰─ "
-	if uc.Layout.FrameBottom != "" {
-		bottomPrefix = uc.Layout.FrameBottom
+	if userConfig.Layout.FrameBottom != "" {
+		bottomPrefix = userConfig.Layout.FrameBottom
 	}
 
 	borderTop := theme.Style(palette.Border, topPrefix)
 	borderBottom := theme.Style(palette.Border, bottomPrefix)
 
-	var b strings.Builder
-	b.Grow(len(borderTop) + len(line1) + 1 + len(borderBottom) + len(line2))
-	b.WriteString(borderTop)
-	b.WriteString(line1)
-	b.WriteByte('\n')
-	b.WriteString(borderBottom)
-	b.WriteString(line2)
-	return b.String()
+	var builder strings.Builder
+	builder.Grow(len(borderTop) + len(line1) + 1 + len(borderBottom) + len(line2))
+	builder.WriteString(borderTop)
+	builder.WriteString(line1)
+	builder.WriteByte('\n')
+	builder.WriteString(borderBottom)
+	builder.WriteString(line2)
+	return builder.String()
 }
 
-func (r *Renderer) renderCompactLayout(p *payload.StatePayload, uc *config.Config, palette theme.Palette) string {
+func (rendererInstance *Renderer) renderCompactLayout(statePayload *payload.StatePayload, userConfig *config.Config, palette theme.Palette) string {
 	topItems := make([]string, 0, 4)
 
-	if uc.Modules.VimMode {
-		if vim := components.RenderVimBadge(p.Vim, palette, uc.Theme.Icons); vim != "" {
-			topItems = append(topItems, vim)
+	if userConfig.Modules.VimMode {
+		if vimBadge := components.RenderVimBadge(statePayload.Vim, palette, userConfig.Theme.Icons); vimBadge != "" {
+			topItems = append(topItems, vimBadge)
 		}
 	}
-	if uc.Modules.AgentState {
-		topItems = append(topItems, components.RenderStateBadge(p.AgentState, palette, uc.Theme.Icons))
+	if userConfig.Modules.AgentState {
+		topItems = append(topItems, components.RenderStateBadge(statePayload.AgentState, palette, userConfig.Theme.Icons))
 	}
-	if uc.Modules.ModelName {
-		if model := components.RenderModelBadge(p.Model, "", palette, uc.Theme.Icons); model != "" {
-			topItems = append(topItems, model)
+	if userConfig.Modules.ModelName {
+		if modelBadge := components.RenderModelBadge(statePayload.Model, "", palette, userConfig.Theme.Icons); modelBadge != "" {
+			topItems = append(topItems, modelBadge)
 		}
 	}
 
-	dotSepStr := uc.Layout.MetricsSeparator
-	if dotSepStr == "" {
-		dotSepStr = " " + theme.SepDot + " "
+	dotSeparatorString := userConfig.Layout.MetricsSeparator
+	if dotSeparatorString == "" {
+		dotSeparatorString = " " + theme.SepDot + " "
 	}
-	dotSep := theme.Style(palette.Separator, dotSepStr)
-	line1 := components.JoinWithSeparator(topItems, dotSep)
+	dotSeparator := theme.Style(palette.Separator, dotSeparatorString)
+	line1 := components.JoinWithSeparator(topItems, dotSeparator)
 
-	compactBarConfig := uc.ContextBar
+	compactBarConfig := userConfig.ContextBar
 	compactBarConfig.Length = min(6, compactBarConfig.Length)
 
-	line2Items := make([]string, 0, 4)
-	if uc.Modules.ContextBar {
-		ctxBar := components.RenderContextBar(p.ContextWindow, compactBarConfig, palette, uc.Theme.Icons)
+	line2Items := make([]string, 0, 5)
+	if userConfig.Modules.ContextBar {
+		ctxBar := components.RenderContextBar(statePayload.ContextWindow, compactBarConfig, palette, userConfig.Theme.Icons)
 		line2Items = append(line2Items, ctxBar)
 	}
-	if uc.Modules.TasksCount {
-		tasks := components.RenderTasksBadge(p.TaskCount, palette, uc.Theme.Icons)
-		line2Items = append(line2Items, tasks)
+	if userConfig.Modules.AttentionBadge {
+		if attentionBadge := components.RenderAttentionBadge(statePayload.IsToolConfirmationPending(), statePayload.GetPendingInputCount(), palette, userConfig.Theme.Icons); attentionBadge != "" {
+			line2Items = append(line2Items, attentionBadge)
+		}
 	}
-	if uc.Modules.ArtifactsCount && p.ArtifactCount > 0 {
-		line2Items = append(line2Items, components.RenderArtifactsBadge(p.ArtifactCount, palette, uc.Theme.Icons))
+	if userConfig.Modules.TasksCount {
+		tasksBadge := components.RenderTasksBadge(statePayload.TaskCount, palette, userConfig.Theme.Icons)
+		line2Items = append(line2Items, tasksBadge)
 	}
-	if uc.Modules.SubagentsCount && p.SubagentCount > 0 {
-		line2Items = append(line2Items, components.RenderSubagentsBadge(p.SubagentCount, palette, uc.Theme.Icons))
+	if userConfig.Modules.ArtifactsCount && statePayload.ArtifactCount > 0 {
+		line2Items = append(line2Items, components.RenderArtifactsBadge(statePayload.ArtifactCount, palette, userConfig.Theme.Icons))
+	}
+	if userConfig.Modules.SubagentsCount && statePayload.SubagentCount > 0 {
+		waitingCount := statePayload.GetWaitingSubagentsCount()
+		if waitingCount > 0 {
+			line2Items = append(line2Items, components.RenderSubagentsDetailedBadge(statePayload.SubagentCount, waitingCount, palette, userConfig.Theme.Icons))
+		} else {
+			line2Items = append(line2Items, components.RenderSubagentsBadge(statePayload.SubagentCount, palette, userConfig.Theme.Icons))
+		}
 	}
 
-	line2 := components.JoinWithSeparator(line2Items, dotSep)
+	line2 := components.JoinWithSeparator(line2Items, dotSeparator)
 
-	var b strings.Builder
-	b.Grow(len(line1) + 1 + len(line2))
-	b.WriteString(line1)
-	b.WriteByte('\n')
-	b.WriteString(line2)
-	return b.String()
+	var builder strings.Builder
+	builder.Grow(len(line1) + 1 + len(line2))
+	builder.WriteString(line1)
+	builder.WriteByte('\n')
+	builder.WriteString(line2)
+	return builder.String()
 }
 
-func (r *Renderer) buildHeaderLine(p *payload.StatePayload, uc *config.Config, palette theme.Palette) string {
+func (rendererInstance *Renderer) buildHeaderLine(statePayload *payload.StatePayload, userConfig *config.Config, palette theme.Palette) string {
 	headerItems := make([]string, 0, 6)
 
-	if uc.Modules.VimMode {
-		if vim := components.RenderVimBadge(p.Vim, palette, uc.Theme.Icons); vim != "" {
-			headerItems = append(headerItems, vim)
+	if userConfig.Modules.VimMode {
+		if vimBadge := components.RenderVimBadge(statePayload.Vim, palette, userConfig.Theme.Icons); vimBadge != "" {
+			headerItems = append(headerItems, vimBadge)
 		}
 	}
 
-	if uc.Modules.AgentState {
-		headerItems = append(headerItems, components.RenderStateBadge(p.AgentState, palette, uc.Theme.Icons))
+	if userConfig.Modules.AgentState {
+		headerItems = append(headerItems, components.RenderStateBadge(statePayload.AgentState, palette, userConfig.Theme.Icons))
 	}
 
-	if uc.Modules.ModelName {
-		if model := components.RenderModelBadge(p.Model, p.ExecutionMode, palette, uc.Theme.Icons); model != "" {
-			headerItems = append(headerItems, model)
+	if userConfig.Modules.ModelName {
+		if modelBadge := components.RenderModelBadge(statePayload.Model, statePayload.ExecutionMode, palette, userConfig.Theme.Icons); modelBadge != "" {
+			headerItems = append(headerItems, modelBadge)
 		}
 	}
 
-	if uc.Modules.GitBranch {
-		if vcs := components.RenderVCSBadge(p.VCS, palette, uc.Theme.Icons); vcs != "" {
-			headerItems = append(headerItems, vcs)
+	if userConfig.Modules.GitBranch {
+		if vcsBadge := components.RenderVCSBadge(statePayload.VCS, palette, userConfig.Theme.Icons); vcsBadge != "" {
+			headerItems = append(headerItems, vcsBadge)
 		}
 	}
 
-	sepStr := uc.Layout.Separator
-	if sepStr == "" {
-		sepStr = " " + theme.SepSlash + " "
+	separatorString := userConfig.Layout.Separator
+	if separatorString == "" {
+		separatorString = " " + theme.SepSlash + " "
 	}
-	slashSep := theme.Style(palette.Separator, sepStr)
-	return components.JoinWithSeparator(headerItems, slashSep)
+	slashSeparator := theme.Style(palette.Separator, separatorString)
+	return components.JoinWithSeparator(headerItems, slashSeparator)
 }
 
-func (r *Renderer) buildMetricsLine(p *payload.StatePayload, uc *config.Config, palette theme.Palette, barLength int) string {
-	barConfig := uc.ContextBar
+func (rendererInstance *Renderer) buildMetricsLine(statePayload *payload.StatePayload, userConfig *config.Config, palette theme.Palette, barLength int) string {
+	barConfig := userConfig.ContextBar
 	if barLength > 0 {
 		barConfig.Length = barLength
 	}
 
 	allItems := make([]string, 0, 6)
-	if uc.Modules.ContextBar {
-		ctxBar := components.RenderContextBar(p.ContextWindow, barConfig, palette, uc.Theme.Icons)
+	if userConfig.Modules.ContextBar {
+		ctxBar := components.RenderContextBar(statePayload.ContextWindow, barConfig, palette, userConfig.Theme.Icons)
 		allItems = append(allItems, ctxBar)
 	}
 
-	statsItems := components.RenderStatsGroup(p, uc, palette)
+	statsItems := components.RenderStatsGroup(statePayload, userConfig, palette)
 	allItems = append(allItems, statsItems...)
 
-	dotSepStr := uc.Layout.MetricsSeparator
-	if dotSepStr == "" {
-		dotSepStr = " " + theme.SepDot + " "
+	dotSeparatorString := userConfig.Layout.MetricsSeparator
+	if dotSeparatorString == "" {
+		dotSeparatorString = " " + theme.SepDot + " "
 	}
-	dotSep := theme.Style(palette.Separator, dotSepStr)
-	return components.JoinWithSeparator(allItems, dotSep)
+	dotSeparator := theme.Style(palette.Separator, dotSeparatorString)
+	return components.JoinWithSeparator(allItems, dotSeparator)
 }

@@ -29,6 +29,12 @@ func TestRenderStateBadge(t *testing.T) {
 		{"working", "WORKING"},
 		{"tool_use", "TOOL"},
 		{"initializing", "INIT"},
+		{"waiting_for_input", "WAITING INPUT"},
+		{"waiting_for_approval", "WAITING APPROVAL"},
+		{"waiting_for_dependents", "WAITING TASK"},
+		{"streaming", "STREAMING"},
+		{"compacting", "COMPACTING"},
+		{"error", "ERROR"},
 		{"unknown", "UNKNOWN"},
 		{"", "IDLE"},
 	}
@@ -144,13 +150,75 @@ func TestRenderContextBar(t *testing.T) {
 func TestRenderSandboxBadge(t *testing.T) {
 	t.Parallel()
 
-	enabled := components.RenderSandboxBadge(payload.SandboxInfo{Enabled: true}, testPalette, testIcons)
+	enabled := components.RenderSandboxBadge(payload.SandboxInfo{Enabled: true, AllowNetwork: false}, testPalette, testIcons)
 	if !strings.Contains(enabled, "ON") {
 		t.Errorf("expected ON for enabled sandbox, got %q", enabled)
+	}
+
+	enabledNet := components.RenderSandboxBadge(payload.SandboxInfo{Enabled: true, AllowNetwork: true}, testPalette, testIcons)
+	if !strings.Contains(enabledNet, "ON (NET)") {
+		t.Errorf("expected ON (NET) for network enabled sandbox, got %q", enabledNet)
 	}
 
 	disabled := components.RenderSandboxBadge(payload.SandboxInfo{Enabled: false}, testPalette, testIcons)
 	if !strings.Contains(disabled, "OFF") {
 		t.Errorf("expected OFF for disabled sandbox, got %q", disabled)
+	}
+}
+
+func TestRenderAttentionBadge(t *testing.T) {
+	t.Parallel()
+
+	none := components.RenderAttentionBadge(false, 0, testPalette, testIcons)
+	if none != "" {
+		t.Errorf("expected empty badge when no attention needed, got %q", none)
+	}
+
+	approval := components.RenderAttentionBadge(true, 0, testPalette, testIcons)
+	if !strings.Contains(approval, "APPROVAL REQ") {
+		t.Errorf("expected APPROVAL REQ in badge, got %q", approval)
+	}
+
+	input := components.RenderAttentionBadge(false, 3, testPalette, testIcons)
+	if !strings.Contains(input, "INPUT REQ (3)") {
+		t.Errorf("expected INPUT REQ (3) in badge, got %q", input)
+	}
+}
+
+func TestRenderSystemBadges(t *testing.T) {
+	t.Parallel()
+
+	mcpBadge := components.RenderMCPBadge(3, testPalette, testIcons)
+	if !strings.Contains(mcpBadge, "3") {
+		t.Errorf("expected 3 in MCP badge, got %q", mcpBadge)
+	}
+
+	skillsBadge := components.RenderSkillsBadge(5, testPalette, testIcons)
+	if !strings.Contains(skillsBadge, "5") {
+		t.Errorf("expected 5 in skills badge, got %q", skillsBadge)
+	}
+
+	terminalsBadge := components.RenderTerminalsBadge(2, testPalette, testIcons)
+	if !strings.Contains(terminalsBadge, "2") {
+		t.Errorf("expected 2 in terminals badge, got %q", terminalsBadge)
+	}
+
+	pluginsBadge := components.RenderPluginsBadge(4, testPalette, testIcons)
+	if !strings.Contains(pluginsBadge, "4") {
+		t.Errorf("expected 4 in plugins badge, got %q", pluginsBadge)
+	}
+}
+
+func TestRenderSubagentsDetailedBadge(t *testing.T) {
+	t.Parallel()
+
+	normal := components.RenderSubagentsDetailedBadge(3, 0, testPalette, testIcons)
+	if !strings.Contains(normal, "3") || strings.Contains(normal, "⏳") {
+		t.Errorf("expected 3 without waiting indicator, got %q", normal)
+	}
+
+	waiting := components.RenderSubagentsDetailedBadge(3, 1, testPalette, testIcons)
+	if !strings.Contains(waiting, "3") || !strings.Contains(waiting, "1⏳") {
+		t.Errorf("expected 3 and (1⏳), got %q", waiting)
 	}
 }

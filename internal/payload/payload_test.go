@@ -492,3 +492,57 @@ func TestErrors_Hierarchy(t *testing.T) {
 		t.Errorf("unexpected error string formatting: %s", errStr)
 	}
 }
+
+func TestParse_ModernAGYPayload(t *testing.T) {
+	t.Parallel()
+
+	fixturePath := filepath.Join("..", "..", "test", "testdata", "payload_agy_modern.json")
+	data, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatalf("failed to read modern fixture: %v", err)
+	}
+
+	p, err := payload.ParseBytes(data)
+	if err != nil {
+		t.Fatalf("ParseBytes failed on modern fixture: %v", err)
+	}
+
+	if p.GetAgentState() != "waiting_for_approval" {
+		t.Errorf("expected state 'waiting_for_approval', got %q", p.GetAgentState())
+	}
+	if !p.IsToolConfirmationPending() {
+		t.Error("expected tool confirmation pending to be true")
+	}
+	if p.GetPendingInputCount() != 1 {
+		t.Errorf("expected pending input count 1, got %d", p.GetPendingInputCount())
+	}
+	if p.GetSubagentCount() != 2 {
+		t.Errorf("expected subagent count 2, got %d", p.GetSubagentCount())
+	}
+	if p.GetWaitingSubagentsCount() != 1 {
+		t.Errorf("expected waiting subagents count 1, got %d", p.GetWaitingSubagentsCount())
+	}
+	if p.GetTerminalCount() != 2 {
+		t.Errorf("expected terminal count 2, got %d", p.GetTerminalCount())
+	}
+	if p.GetMCPCount() != 3 {
+		t.Errorf("expected mcp count 3, got %d", p.GetMCPCount())
+	}
+	if p.GetSkillsCount() != 6 {
+		t.Errorf("expected skills count 6, got %d", p.GetSkillsCount())
+	}
+	if p.GetPluginsCount() != 2 {
+		t.Errorf("expected plugins count 2, got %d", p.GetPluginsCount())
+	}
+	if !p.GetSandbox().IsEnabled() || !p.GetSandbox().IsAllowNetwork() {
+		t.Error("expected sandbox enabled with network allowed")
+	}
+	if p.GetExecutionMode() != "BOOST" {
+		t.Errorf("expected execution mode 'BOOST', got %q", p.GetExecutionMode())
+	}
+
+	stats := p.GetStats()
+	if stats.GetTerminalCount() != 2 || stats.GetMCPCount() != 3 || stats.GetSkillsCount() != 6 {
+		t.Errorf("unexpected stats counts: %+v", stats)
+	}
+}

@@ -13,54 +13,41 @@ import (
 )
 
 const (
-	// MaxPayloadSize defines the upper limit of payload ingestion (2MB).
-	MaxPayloadSize = 2 * 1024 * 1024
-
-	// DefaultTerminalWidth is the fallback terminal width when unspecified or invalid.
+	MaxPayloadSize       = 2 * 1024 * 1024
 	DefaultTerminalWidth = 80
-
-	// DefaultAgentState is the fallback agent state when unspecified.
-	DefaultAgentState = "idle"
+	DefaultAgentState    = "idle"
 )
 
-// ModelInfo describes the active LLM model.
 type ModelInfo struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"display_name"`
 }
 
-// GetID returns the sanitized model ID, or "unknown" if empty.
-func (m ModelInfo) GetID() string {
-	return cmp.Or(Sanitize(m.ID), "unknown")
+func (model ModelInfo) GetID() string {
+	return cmp.Or(Sanitize(model.ID), "unknown")
 }
 
-// GetDisplayName returns the sanitized display name, or falls back to GetID().
-func (m ModelInfo) GetDisplayName() string {
-	return cmp.Or(Sanitize(m.DisplayName), m.GetID())
+func (model ModelInfo) GetDisplayName() string {
+	return cmp.Or(Sanitize(model.DisplayName), model.GetID())
 }
 
-// Name returns the best display identifier for the model.
-func (m ModelInfo) Name() string {
-	return m.GetDisplayName()
+func (model ModelInfo) Name() string {
+	return model.GetDisplayName()
 }
 
-// WorkspaceInfo describes the active directory and project paths.
 type WorkspaceInfo struct {
 	CurrentDir string `json:"current_dir"`
 	ProjectDir string `json:"project_dir"`
 }
 
-// GetCurrentDir returns the sanitized current working directory.
-func (w WorkspaceInfo) GetCurrentDir() string {
-	return Sanitize(w.CurrentDir)
+func (workspace WorkspaceInfo) GetCurrentDir() string {
+	return Sanitize(workspace.CurrentDir)
 }
 
-// GetProjectDir returns the sanitized project directory.
-func (w WorkspaceInfo) GetProjectDir() string {
-	return Sanitize(w.ProjectDir)
+func (workspace WorkspaceInfo) GetProjectDir() string {
+	return Sanitize(workspace.ProjectDir)
 }
 
-// TokenUsage contains granular token accounting details.
 type TokenUsage struct {
 	InputTokens              int `json:"input_tokens"`
 	OutputTokens             int `json:"output_tokens"`
@@ -68,32 +55,26 @@ type TokenUsage struct {
 	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
 }
 
-// GetInputTokens returns the input token count (guaranteed >= 0).
-func (t TokenUsage) GetInputTokens() int {
-	return max(0, t.InputTokens)
+func (usage TokenUsage) GetInputTokens() int {
+	return max(0, usage.InputTokens)
 }
 
-// GetOutputTokens returns the output token count (guaranteed >= 0).
-func (t TokenUsage) GetOutputTokens() int {
-	return max(0, t.OutputTokens)
+func (usage TokenUsage) GetOutputTokens() int {
+	return max(0, usage.OutputTokens)
 }
 
-// GetCacheCreationInputTokens returns the cache creation token count (guaranteed >= 0).
-func (t TokenUsage) GetCacheCreationInputTokens() int {
-	return max(0, t.CacheCreationInputTokens)
+func (usage TokenUsage) GetCacheCreationInputTokens() int {
+	return max(0, usage.CacheCreationInputTokens)
 }
 
-// GetCacheReadInputTokens returns the cache read token count (guaranteed >= 0).
-func (t TokenUsage) GetCacheReadInputTokens() int {
-	return max(0, t.CacheReadInputTokens)
+func (usage TokenUsage) GetCacheReadInputTokens() int {
+	return max(0, usage.CacheReadInputTokens)
 }
 
-// TotalTokens returns the sum of input and output tokens.
-func (t TokenUsage) TotalTokens() int {
-	return t.GetInputTokens() + t.GetOutputTokens()
+func (usage TokenUsage) TotalTokens() int {
+	return usage.GetInputTokens() + usage.GetOutputTokens()
 }
 
-// ContextWindowInfo contains context usage and token limits.
 type ContextWindowInfo struct {
 	TotalInputTokens    int        `json:"total_input_tokens"`
 	TotalOutputTokens   int        `json:"total_output_tokens"`
@@ -103,58 +84,38 @@ type ContextWindowInfo struct {
 	CurrentUsage        TokenUsage `json:"current_usage"`
 }
 
-// ContextInfo is an alias for ContextWindowInfo for cross-package compatibility.
 type ContextInfo = ContextWindowInfo
 
-// GetTotalInputTokens returns the total input tokens (guaranteed >= 0).
-func (c ContextWindowInfo) GetTotalInputTokens() int {
-	return max(0, c.TotalInputTokens)
+func (contextWindow ContextWindowInfo) GetTotalInputTokens() int {
+	return max(0, contextWindow.TotalInputTokens)
 }
 
-// GetTotalOutputTokens returns the total output tokens (guaranteed >= 0).
-func (c ContextWindowInfo) GetTotalOutputTokens() int {
-	return max(0, c.TotalOutputTokens)
+func (contextWindow ContextWindowInfo) GetTotalOutputTokens() int {
+	return max(0, contextWindow.TotalOutputTokens)
 }
 
-// GetContextWindowSize returns the configured context window capacity.
-func (c ContextWindowInfo) GetContextWindowSize() int {
-	return max(0, c.ContextWindowSize)
+func (contextWindow ContextWindowInfo) GetContextWindowSize() int {
+	return max(0, contextWindow.ContextWindowSize)
 }
 
-// GetUsedPercentage returns the context window used percentage clamped to [0.0, 100.0].
-func (c ContextWindowInfo) GetUsedPercentage() float64 {
-	if c.UsedPercentage < 0.0 {
-		return 0.0
-	}
-	if c.UsedPercentage > 100.0 {
+func (contextWindow ContextWindowInfo) GetUsedPercentage() float64 {
+	return min(100.0, max(0.0, contextWindow.UsedPercentage))
+}
+
+func (contextWindow ContextWindowInfo) GetRemainingPercentage() float64 {
+	if contextWindow.RemainingPercentage == 0.0 && contextWindow.UsedPercentage <= 0.0 {
 		return 100.0
 	}
-	return c.UsedPercentage
+	if contextWindow.RemainingPercentage == 0.0 && contextWindow.UsedPercentage > 0.0 {
+		return max(0.0, 100.0-contextWindow.UsedPercentage)
+	}
+	return min(100.0, max(0.0, contextWindow.RemainingPercentage))
 }
 
-// GetRemainingPercentage returns the remaining percentage clamped to [0.0, 100.0].
-func (c ContextWindowInfo) GetRemainingPercentage() float64 {
-	if c.RemainingPercentage == 0.0 && c.UsedPercentage <= 0.0 {
-		return 100.0
-	}
-	if c.RemainingPercentage == 0.0 && c.UsedPercentage > 0.0 {
-		return max(0.0, 100.0-c.UsedPercentage)
-	}
-	if c.RemainingPercentage < 0.0 {
-		return 0.0
-	}
-	if c.RemainingPercentage > 100.0 {
-		return 100.0
-	}
-	return c.RemainingPercentage
+func (contextWindow ContextWindowInfo) GetCurrentUsage() TokenUsage {
+	return contextWindow.CurrentUsage
 }
 
-// GetCurrentUsage returns the current TokenUsage struct safely.
-func (c ContextWindowInfo) GetCurrentUsage() TokenUsage {
-	return c.CurrentUsage
-}
-
-// VCSInfo contains version control state.
 type VCSInfo struct {
 	Type   string `json:"type"`
 	Branch string `json:"branch"`
@@ -162,43 +123,35 @@ type VCSInfo struct {
 	Dirty  bool   `json:"dirty"`
 }
 
-// GetType returns the sanitized VCS type, defaulting to "git".
-func (v VCSInfo) GetType() string {
-	return cmp.Or(Sanitize(v.Type), "git")
+func (vcs VCSInfo) GetType() string {
+	return cmp.Or(Sanitize(vcs.Type), "git")
 }
 
-// GetBranch returns the sanitized VCS branch name.
-func (v VCSInfo) GetBranch() string {
-	return Sanitize(v.Branch)
+func (vcs VCSInfo) GetBranch() string {
+	return Sanitize(vcs.Branch)
 }
 
-// GetClient returns the sanitized VCS client identifier.
-func (v VCSInfo) GetClient() string {
-	return Sanitize(v.Client)
+func (vcs VCSInfo) GetClient() string {
+	return Sanitize(vcs.Client)
 }
 
-// IsDirty reports whether there are uncommitted working tree changes.
-func (v VCSInfo) IsDirty() bool {
-	return v.Dirty
+func (vcs VCSInfo) IsDirty() bool {
+	return vcs.Dirty
 }
 
-// SandboxInfo describes environment execution isolation.
 type SandboxInfo struct {
 	Enabled      bool `json:"enabled"`
 	AllowNetwork bool `json:"allow_network"`
 }
 
-// IsEnabled reports whether sandboxing is active.
-func (s SandboxInfo) IsEnabled() bool {
-	return s.Enabled
+func (sandbox SandboxInfo) IsEnabled() bool {
+	return sandbox.Enabled
 }
 
-// IsAllowNetwork reports whether the sandbox permits outbound network access.
-func (s SandboxInfo) IsAllowNetwork() bool {
-	return s.AllowNetwork
+func (sandbox SandboxInfo) IsAllowNetwork() bool {
+	return sandbox.AllowNetwork
 }
 
-// QuotaDetail contains rate limit metrics and reset countdowns.
 type QuotaDetail struct {
 	RemainingFraction float64 `json:"remaining_fraction"`
 	UsedPercentage    float64 `json:"used_percentage,omitempty"`
@@ -206,7 +159,6 @@ type QuotaDetail struct {
 	ResetInSeconds    int     `json:"reset_in_seconds"`
 }
 
-// RateLimit describes duration-based limits (e.g. five_hour, seven_day).
 type RateLimit struct {
 	UsedPercentage      float64 `json:"used_percentage"`
 	RemainingPercentage float64 `json:"remaining_percentage"`
@@ -214,102 +166,115 @@ type RateLimit struct {
 	ResetInSeconds      int     `json:"reset_in_seconds"`
 }
 
-// GetRemainingFraction returns the remaining quota fraction.
-func (q QuotaDetail) GetRemainingFraction() float64 {
-	if q.RemainingFraction == 0.0 && q.ResetTime == "" && q.ResetInSeconds == 0 {
+func (quota QuotaDetail) GetRemainingFraction() float64 {
+	if quota.RemainingFraction == 0.0 && quota.ResetTime == "" && quota.ResetInSeconds == 0 {
 		return 1.0
 	}
-	if q.RemainingFraction < 0.0 {
-		return 0.0
-	}
-	if q.RemainingFraction > 1.0 {
-		return 1.0
-	}
-	return q.RemainingFraction
+	return min(1.0, max(0.0, quota.RemainingFraction))
 }
 
-// GetResetTime returns the sanitized reset timestamp string.
-func (q QuotaDetail) GetResetTime() string {
-	return Sanitize(q.ResetTime)
+func (quota QuotaDetail) GetResetTime() string {
+	return Sanitize(quota.ResetTime)
 }
 
-// GetResetInSeconds returns the seconds until reset (guaranteed >= 0).
-func (q QuotaDetail) GetResetInSeconds() int {
-	return max(0, q.ResetInSeconds)
+func (quota QuotaDetail) GetResetInSeconds() int {
+	return max(0, quota.ResetInSeconds)
 }
 
-// QuotaInfo is a type alias for the Quota map.
 type QuotaInfo = map[string]QuotaDetail
 
-// VimInfo contains Vim/Neovim statusline integration state.
 type VimInfo struct {
 	Mode string `json:"mode"`
 }
 
-// GetMode returns the sanitized Vim mode.
-func (v *VimInfo) GetMode() string {
-	if v == nil {
+func (vim *VimInfo) GetMode() string {
+	if vim == nil {
 		return ""
 	}
-	return Sanitize(v.Mode)
+	return Sanitize(vim.Mode)
 }
 
-// StatsInfo summarizes execution metrics for easy component consumption.
+type SubagentDetail struct {
+	Role  string `json:"role"`
+	Type  string `json:"type"`
+	State string `json:"state"`
+}
+
 type StatsInfo struct {
 	ArtifactCount int `json:"artifact_count"`
 	TaskCount     int `json:"task_count"`
 	SubagentCount int `json:"subagent_count"`
+	TerminalCount int `json:"terminal_count"`
+	MCPCount      int `json:"mcp_count"`
+	SkillsCount   int `json:"skills_count"`
+	PluginsCount  int `json:"plugins_count"`
 }
 
-// GetArtifactCount returns the number of generated artifacts.
-func (s StatsInfo) GetArtifactCount() int {
-	return max(0, s.ArtifactCount)
+func (stats StatsInfo) GetArtifactCount() int {
+	return max(0, stats.ArtifactCount)
 }
 
-// GetTaskCount returns the number of active tasks.
-func (s StatsInfo) GetTaskCount() int {
-	return max(0, s.TaskCount)
+func (stats StatsInfo) GetTaskCount() int {
+	return max(0, stats.TaskCount)
 }
 
-// GetSubagentCount returns the number of running subagents.
-func (s StatsInfo) GetSubagentCount() int {
-	return max(0, s.SubagentCount)
+func (stats StatsInfo) GetSubagentCount() int {
+	return max(0, stats.SubagentCount)
 }
 
-// StatePayload is the root JSON structure passed into antigravity-cli-statusline.
+func (stats StatsInfo) GetTerminalCount() int {
+	return max(0, stats.TerminalCount)
+}
+
+func (stats StatsInfo) GetMCPCount() int {
+	return max(0, stats.MCPCount)
+}
+
+func (stats StatsInfo) GetSkillsCount() int {
+	return max(0, stats.SkillsCount)
+}
+
+func (stats StatsInfo) GetPluginsCount() int {
+	return max(0, stats.PluginsCount)
+}
+
 type StatePayload struct {
-	CWD                     string                 `json:"cwd"`
-	SessionID               string                 `json:"session_id"`
-	ConversationID          string                 `json:"conversation_id"`
-	TranscriptPath          string                 `json:"transcript_path"`
-	Model                   ModelInfo              `json:"model"`
-	Workspace               WorkspaceInfo          `json:"workspace"`
-	Version                 string                 `json:"version"`
-	ContextWindow           ContextWindowInfo      `json:"context_window"`
-	Exceeds200kTokens       *bool                  `json:"exceeds_200k_tokens"`
-	Product                 string                 `json:"product"`
-	Quota                   map[string]QuotaDetail `json:"quota"`
-	WeeklyUsagePercent      *float64               `json:"weekly_usage_percent,omitempty"`
-	SessionUsagePercent     *float64               `json:"session_usage_percent,omitempty"`
-	RateLimits              map[string]RateLimit   `json:"rate_limits,omitempty"`
-	AgentState              string                 `json:"agent_state"`
-	VCS                     VCSInfo                `json:"vcs"`
-	Sandbox                 SandboxInfo            `json:"sandbox"`
-	ArtifactCount           int                    `json:"artifact_count"`
-	PlanTier                string                 `json:"plan_tier"`
-	Email                   string                 `json:"email"`
-	PendingInputCount       int                    `json:"pending_input_count"`
-	ToolConfirmationPending bool                   `json:"tool_confirmation_pending"`
-	TaskCount               int                    `json:"task_count"`
-	SubagentCount           int                    `json:"-"`
-	RawSubagents            json.RawMessage        `json:"subagents"`
-	TerminalWidth           int                    `json:"terminal_width"`
-	ExecutionMode           string                 `json:"execution_mode"`
-	Vim                     *VimInfo               `json:"vim"`
+	CWD                     string                     `json:"cwd"`
+	SessionID               string                     `json:"session_id"`
+	ConversationID          string                     `json:"conversation_id"`
+	TranscriptPath          string                     `json:"transcript_path"`
+	Model                   ModelInfo                  `json:"model"`
+	Workspace               WorkspaceInfo              `json:"workspace"`
+	Version                 string                     `json:"version"`
+	ContextWindow           ContextWindowInfo          `json:"context_window"`
+	Exceeds200kTokens       *bool                      `json:"exceeds_200k_tokens"`
+	Product                 string                     `json:"product"`
+	Quota                   map[string]QuotaDetail     `json:"quota"`
+	WeeklyUsagePercent      *float64                   `json:"weekly_usage_percent,omitempty"`
+	SessionUsagePercent     *float64                   `json:"session_usage_percent,omitempty"`
+	RateLimits              map[string]RateLimit       `json:"rate_limits,omitempty"`
+	AgentState              string                     `json:"agent_state"`
+	VCS                     VCSInfo                    `json:"vcs"`
+	Sandbox                 SandboxInfo                `json:"sandbox"`
+	ArtifactCount           int                        `json:"artifact_count"`
+	PlanTier                string                     `json:"plan_tier"`
+	Email                   string                     `json:"email"`
+	PendingInputCount       int                        `json:"pending_input_count"`
+	ToolConfirmationPending bool                       `json:"tool_confirmation_pending"`
+	TaskCount               int                        `json:"task_count"`
+	SubagentCount           int                        `json:"-"`
+	RawSubagents            json.RawMessage            `json:"subagents"`
+	SubagentDetails         []SubagentDetail           `json:"-"`
+	TerminalCount           int                        `json:"terminal_count"`
+	MCPCount                int                        `json:"mcp_count"`
+	SkillsCount             int                        `json:"skills_count"`
+	PluginsCount            int                        `json:"plugins_count"`
+	TerminalWidth           int                        `json:"terminal_width"`
+	ExecutionMode           string                     `json:"execution_mode"`
+	Vim                     *VimInfo                   `json:"vim"`
 	RawMap                  map[string]json.RawMessage `json:"-"`
 }
 
-// NewDefaultStatePayload initializes a safe, default StatePayload instance.
 func NewDefaultStatePayload() *StatePayload {
 	return &StatePayload{
 		AgentState:    DefaultAgentState,
@@ -322,249 +287,324 @@ func NewDefaultStatePayload() *StatePayload {
 	}
 }
 
-// GetCWD returns the sanitized current working directory.
-func (p *StatePayload) GetCWD() string {
-	if p == nil {
+func (payload *StatePayload) GetCWD() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.CWD)
+	return Sanitize(payload.CWD)
 }
 
-// GetSessionID returns the sanitized session identifier.
-func (p *StatePayload) GetSessionID() string {
-	if p == nil {
+func (payload *StatePayload) GetSessionID() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.SessionID)
+	return Sanitize(payload.SessionID)
 }
 
-// GetConversationID returns the sanitized conversation identifier.
-func (p *StatePayload) GetConversationID() string {
-	if p == nil {
+func (payload *StatePayload) GetConversationID() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.ConversationID)
+	return Sanitize(payload.ConversationID)
 }
 
-// GetTranscriptPath returns the sanitized transcript file path.
-func (p *StatePayload) GetTranscriptPath() string {
-	if p == nil {
+func (payload *StatePayload) GetTranscriptPath() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.TranscriptPath)
+	return Sanitize(payload.TranscriptPath)
 }
 
-// GetModel returns the ModelInfo struct safely.
-func (p *StatePayload) GetModel() ModelInfo {
-	if p == nil {
+func (payload *StatePayload) GetModel() ModelInfo {
+	if payload == nil {
 		return ModelInfo{ID: "unknown", DisplayName: "Unknown"}
 	}
-	return p.Model
+	return payload.Model
 }
 
-// GetWorkspace returns the WorkspaceInfo struct safely.
-func (p *StatePayload) GetWorkspace() WorkspaceInfo {
-	if p == nil {
+func (payload *StatePayload) GetWorkspace() WorkspaceInfo {
+	if payload == nil {
 		return WorkspaceInfo{}
 	}
-	return p.Workspace
+	return payload.Workspace
 }
 
-// GetVersion returns the sanitized version string.
-func (p *StatePayload) GetVersion() string {
-	if p == nil {
+func (payload *StatePayload) GetVersion() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.Version)
+	return Sanitize(payload.Version)
 }
 
-// GetContextWindow returns the ContextWindowInfo struct safely.
-func (p *StatePayload) GetContextWindow() ContextWindowInfo {
-	if p == nil {
+func (payload *StatePayload) GetContextWindow() ContextWindowInfo {
+	if payload == nil {
 		return ContextWindowInfo{}
 	}
-	return p.ContextWindow
+	return payload.ContextWindow
 }
 
-// GetProduct returns the sanitized product identifier.
-func (p *StatePayload) GetProduct() string {
-	if p == nil {
+func (payload *StatePayload) GetProduct() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.Product)
+	return Sanitize(payload.Product)
 }
 
-// GetQuota returns a defensive clone of the Quota map.
-func (p *StatePayload) GetQuota() map[string]QuotaDetail {
-	if p == nil || p.Quota == nil {
+func (payload *StatePayload) GetQuota() map[string]QuotaDetail {
+	if payload == nil || payload.Quota == nil {
 		return make(map[string]QuotaDetail)
 	}
-	return maps.Clone(p.Quota)
+	return maps.Clone(payload.Quota)
 }
 
-// GetAgentState returns the sanitized agent state, defaulting to "idle".
-func (p *StatePayload) GetAgentState() string {
-	if p == nil {
+func (payload *StatePayload) GetAgentState() string {
+	if payload == nil {
 		return DefaultAgentState
 	}
-	return cmp.Or(Sanitize(p.AgentState), DefaultAgentState)
+	return cmp.Or(Sanitize(payload.AgentState), DefaultAgentState)
 }
 
-// GetVCS returns the VCSInfo struct safely.
-func (p *StatePayload) GetVCS() VCSInfo {
-	if p == nil {
+func (payload *StatePayload) GetVCS() VCSInfo {
+	if payload == nil {
 		return VCSInfo{Type: "git"}
 	}
-	return p.VCS
+	return payload.VCS
 }
 
-// GetSandbox returns the SandboxInfo struct safely.
-func (p *StatePayload) GetSandbox() SandboxInfo {
-	if p == nil {
+func (payload *StatePayload) GetSandbox() SandboxInfo {
+	if payload == nil {
 		return SandboxInfo{}
 	}
-	return p.Sandbox
+	return payload.Sandbox
 }
 
-// GetArtifactCount returns the number of artifacts (guaranteed >= 0).
-func (p *StatePayload) GetArtifactCount() int {
-	if p == nil {
+func (payload *StatePayload) GetArtifactCount() int {
+	if payload == nil {
 		return 0
 	}
-	return max(0, p.ArtifactCount)
+	return max(0, payload.ArtifactCount)
 }
 
-// GetPlanTier returns the sanitized plan tier name.
-func (p *StatePayload) GetPlanTier() string {
-	if p == nil {
+func (payload *StatePayload) GetPlanTier() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.PlanTier)
+	return Sanitize(payload.PlanTier)
 }
 
-// GetEmail returns the sanitized email address.
-func (p *StatePayload) GetEmail() string {
-	if p == nil {
+func (payload *StatePayload) GetEmail() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.Email)
+	return Sanitize(payload.Email)
 }
 
-// GetPendingInputCount returns the count of pending input requests (guaranteed >= 0).
-func (p *StatePayload) GetPendingInputCount() int {
-	if p == nil {
+func (payload *StatePayload) GetPendingInputCount() int {
+	if payload == nil {
 		return 0
 	}
-	return max(0, p.PendingInputCount)
+	return max(0, payload.PendingInputCount)
 }
 
-// IsToolConfirmationPending reports whether user tool confirmation is pending.
-func (p *StatePayload) IsToolConfirmationPending() bool {
-	if p == nil {
+func (payload *StatePayload) IsToolConfirmationPending() bool {
+	if payload == nil {
 		return false
 	}
-	return p.ToolConfirmationPending
+	return payload.ToolConfirmationPending
 }
 
-// GetTaskCount returns the number of active tasks (guaranteed >= 0).
-func (p *StatePayload) GetTaskCount() int {
-	if p == nil {
+func (payload *StatePayload) GetTaskCount() int {
+	if payload == nil {
 		return 0
 	}
-	return max(0, p.TaskCount)
+	return max(0, payload.TaskCount)
 }
 
-// GetSubagentCount returns the number of running subagents (guaranteed >= 0).
-func (p *StatePayload) GetSubagentCount() int {
-	if p == nil {
+func (payload *StatePayload) GetSubagentCount() int {
+	if payload == nil {
 		return 0
 	}
-	return max(0, p.SubagentCount)
+	return max(0, payload.SubagentCount)
 }
 
-// GetTerminalWidth returns the terminal width, falling back to 80 if invalid.
-func (p *StatePayload) GetTerminalWidth() int {
-	if p == nil || p.TerminalWidth <= 0 {
+func (payload *StatePayload) GetTerminalWidth() int {
+	if payload == nil || payload.TerminalWidth <= 0 {
 		return DefaultTerminalWidth
 	}
-	return p.TerminalWidth
+	return payload.TerminalWidth
 }
 
-// GetExecutionMode returns the sanitized execution mode.
-func (p *StatePayload) GetExecutionMode() string {
-	if p == nil {
+func (payload *StatePayload) GetExecutionMode() string {
+	if payload == nil {
 		return ""
 	}
-	return Sanitize(p.ExecutionMode)
+	return Sanitize(payload.ExecutionMode)
 }
 
-// GetVim returns the VimInfo struct pointer or nil safely.
-func (p *StatePayload) GetVim() *VimInfo {
-	if p == nil {
+func (payload *StatePayload) GetVim() *VimInfo {
+	if payload == nil {
 		return nil
 	}
-	return p.Vim
+	return payload.Vim
 }
 
-// GetStats returns a consolidated StatsInfo struct.
-func (p *StatePayload) GetStats() StatsInfo {
-	if p == nil {
+func (payload *StatePayload) GetTerminalCount() int {
+	if payload == nil {
+		return 0
+	}
+	return max(0, payload.TerminalCount)
+}
+
+func (payload *StatePayload) GetMCPCount() int {
+	if payload == nil {
+		return 0
+	}
+	return max(0, payload.MCPCount)
+}
+
+func (payload *StatePayload) GetSkillsCount() int {
+	if payload == nil {
+		return 0
+	}
+	return max(0, payload.SkillsCount)
+}
+
+func (payload *StatePayload) GetPluginsCount() int {
+	if payload == nil {
+		return 0
+	}
+	return max(0, payload.PluginsCount)
+}
+
+func (payload *StatePayload) GetSubagentDetails() []SubagentDetail {
+	if payload == nil {
+		return nil
+	}
+	return payload.SubagentDetails
+}
+
+func (payload *StatePayload) GetWaitingSubagentsCount() int {
+	if payload == nil {
+		return 0
+	}
+	waitingCount := 0
+	for _, subagent := range payload.SubagentDetails {
+		state := strings.ToLower(subagent.State)
+		if strings.HasPrefix(state, "waiting") {
+			waitingCount++
+		}
+	}
+	return waitingCount
+}
+
+func (payload *StatePayload) GetStats() StatsInfo {
+	if payload == nil {
 		return StatsInfo{}
 	}
 	return StatsInfo{
-		ArtifactCount: p.GetArtifactCount(),
-		TaskCount:     p.GetTaskCount(),
-		SubagentCount: p.GetSubagentCount(),
+		ArtifactCount: payload.GetArtifactCount(),
+		TaskCount:     payload.GetTaskCount(),
+		SubagentCount: payload.GetSubagentCount(),
+		TerminalCount: payload.GetTerminalCount(),
+		MCPCount:      payload.GetMCPCount(),
+		SkillsCount:   payload.GetSkillsCount(),
+		PluginsCount:  payload.GetPluginsCount(),
 	}
 }
 
-// SanitizeFields sanitizes all string fields within the payload in-place.
-func (p *StatePayload) SanitizeFields() {
-	if p == nil {
+func (payload *StatePayload) SanitizeFields() {
+	if payload == nil {
 		return
 	}
-	p.CWD = Sanitize(p.CWD)
-	p.SessionID = Sanitize(p.SessionID)
-	p.ConversationID = Sanitize(p.ConversationID)
-	p.TranscriptPath = Sanitize(p.TranscriptPath)
-	p.Model.ID = Sanitize(p.Model.ID)
-	p.Model.DisplayName = Sanitize(p.Model.DisplayName)
-	p.Workspace.CurrentDir = Sanitize(p.Workspace.CurrentDir)
-	p.Workspace.ProjectDir = Sanitize(p.Workspace.ProjectDir)
-	p.Version = Sanitize(p.Version)
-	p.Product = Sanitize(p.Product)
-	p.AgentState = Sanitize(p.AgentState)
-	p.VCS.Type = Sanitize(p.VCS.Type)
-	p.VCS.Branch = Sanitize(p.VCS.Branch)
-	p.VCS.Client = Sanitize(p.VCS.Client)
-	p.PlanTier = Sanitize(p.PlanTier)
-	p.Email = Sanitize(p.Email)
-	p.ExecutionMode = Sanitize(p.ExecutionMode)
-	if p.Vim != nil {
-		p.Vim.Mode = Sanitize(p.Vim.Mode)
+	payload.CWD = Sanitize(payload.CWD)
+	payload.SessionID = Sanitize(payload.SessionID)
+	payload.ConversationID = Sanitize(payload.ConversationID)
+	payload.TranscriptPath = Sanitize(payload.TranscriptPath)
+	payload.Model.ID = Sanitize(payload.Model.ID)
+	payload.Model.DisplayName = Sanitize(payload.Model.DisplayName)
+	payload.Workspace.CurrentDir = Sanitize(payload.Workspace.CurrentDir)
+	payload.Workspace.ProjectDir = Sanitize(payload.Workspace.ProjectDir)
+	payload.Version = Sanitize(payload.Version)
+	payload.Product = Sanitize(payload.Product)
+	payload.AgentState = Sanitize(payload.AgentState)
+	payload.VCS.Type = Sanitize(payload.VCS.Type)
+	payload.VCS.Branch = Sanitize(payload.VCS.Branch)
+	payload.VCS.Client = Sanitize(payload.VCS.Client)
+	payload.PlanTier = Sanitize(payload.PlanTier)
+	payload.Email = Sanitize(payload.Email)
+	payload.ExecutionMode = Sanitize(payload.ExecutionMode)
+	if payload.Vim != nil {
+		payload.Vim.Mode = Sanitize(payload.Vim.Mode)
 	}
 }
 
-// resolveSubagentCount parses the flexible subagents field (either integer or array).
-func (p *StatePayload) resolveSubagentCount() {
-	if p == nil || len(p.RawSubagents) == 0 {
+func (payload *StatePayload) resolveSubagentCount() {
+	if payload == nil || len(payload.RawSubagents) == 0 {
 		return
 	}
 
 	var count int
-	if err := json.Unmarshal(p.RawSubagents, &count); err == nil {
-		p.SubagentCount = max(0, count)
+	if err := json.Unmarshal(payload.RawSubagents, &count); err == nil {
+		payload.SubagentCount = max(0, count)
+		return
+	}
+
+	var details []SubagentDetail
+	if err := json.Unmarshal(payload.RawSubagents, &details); err == nil {
+		payload.SubagentDetails = details
+		payload.SubagentCount = len(details)
 		return
 	}
 
 	var list []any
-	if err := json.Unmarshal(p.RawSubagents, &list); err == nil {
-		p.SubagentCount = len(list)
+	if err := json.Unmarshal(payload.RawSubagents, &list); err == nil {
+		payload.SubagentCount = len(list)
 	}
 }
 
-// Parse reads and unmarshals a StatePayload from an io.Reader, enforcing a 2MB maximum limit.
-// It returns a safe default StatePayload even when parsing errors occur.
+func (payload *StatePayload) resolveAdditionalCounts() {
+	if payload == nil || payload.RawMap == nil {
+		return
+	}
+	if payload.TerminalCount == 0 {
+		if raw, ok := payload.RawMap["terminals"]; ok {
+			var list []any
+			if json.Unmarshal(raw, &list) == nil {
+				payload.TerminalCount = len(list)
+			}
+		}
+	}
+	if payload.MCPCount == 0 {
+		if raw, ok := payload.RawMap["mcp_servers"]; ok {
+			var list []any
+			if json.Unmarshal(raw, &list) == nil {
+				payload.MCPCount = len(list)
+			} else {
+				var dict map[string]any
+				if json.Unmarshal(raw, &dict) == nil {
+					payload.MCPCount = len(dict)
+				}
+			}
+		}
+	}
+	if payload.SkillsCount == 0 {
+		if raw, ok := payload.RawMap["skills"]; ok {
+			var list []any
+			if json.Unmarshal(raw, &list) == nil {
+				payload.SkillsCount = len(list)
+			}
+		}
+	}
+	if payload.PluginsCount == 0 {
+		if raw, ok := payload.RawMap["plugins"]; ok {
+			var list []any
+			if json.Unmarshal(raw, &list) == nil {
+				payload.PluginsCount = len(list)
+			}
+		}
+	}
+}
+
 func Parse(reader io.Reader) (*StatePayload, error) {
 	if reader == nil {
 		return NewDefaultStatePayload(), &ParseError{
@@ -574,7 +614,6 @@ func Parse(reader io.Reader) (*StatePayload, error) {
 		}
 	}
 
-	// Bounded ingestion: Read up to MaxPayloadSize + 1 bytes to detect truncation / oversized payload
 	limitedReader := io.LimitReader(reader, int64(MaxPayloadSize)+1)
 	data, err := io.ReadAll(limitedReader)
 	if err != nil {
@@ -605,7 +644,6 @@ func Parse(reader io.Reader) (*StatePayload, error) {
 	return ParseBytes(trimmed)
 }
 
-// ParseBytes parses a raw byte slice into a StatePayload.
 func ParseBytes(data []byte) (*StatePayload, error) {
 	if len(data) > MaxPayloadSize {
 		return NewDefaultStatePayload(), &ParseError{
@@ -642,7 +680,6 @@ func ParseBytes(data []byte) (*StatePayload, error) {
 	payload.resolveSubagentCount()
 	payload.resolveVCS()
 
-	// Apply fallback defaults if unmarshaling left them blank
 	payload.AgentState = cmp.Or(payload.AgentState, DefaultAgentState)
 	if payload.TerminalWidth <= 0 {
 		payload.TerminalWidth = DefaultTerminalWidth
@@ -655,220 +692,232 @@ func ParseBytes(data []byte) (*StatePayload, error) {
 	if json.Unmarshal(trimmed, &rawMap) == nil {
 		payload.RawMap = rawMap
 	}
+	payload.resolveAdditionalCounts()
 
 	return payload, nil
 }
 
-// resolveVCS detects Git branch locally if omitted in the payload.
-func (p *StatePayload) resolveVCS() {
-	if p.VCS.Branch != "" {
+func (payload *StatePayload) resolveVCS() {
+	if payload.VCS.Branch != "" {
 		return
 	}
-	// Check directories in priority order: CWD, Workspace.CurrentDir, Workspace.ProjectDir
-	dirs := []string{p.CWD, p.Workspace.CurrentDir, p.Workspace.ProjectDir}
-	for _, dir := range dirs {
-		if dir == "" {
+
+	directories := []string{payload.CWD, payload.Workspace.CurrentDir, payload.Workspace.ProjectDir}
+	for _, directory := range directories {
+		if directory == "" {
 			continue
 		}
-		if branch, dirty := findGitBranch(dir); branch != "" {
-			p.VCS.Branch = branch
-			p.VCS.Dirty = p.VCS.Dirty || dirty
-			p.VCS.Type = "git"
+		if branch, dirty := findGitBranch(directory); branch != "" {
+			payload.VCS.Branch = branch
+			payload.VCS.Dirty = payload.VCS.Dirty || dirty
+			payload.VCS.Type = "git"
 			return
 		}
 	}
-	// Fallback to runtime current working directory
-	if cwd, err := os.Getwd(); err == nil && cwd != "" {
-		if branch, dirty := findGitBranch(cwd); branch != "" {
-			p.VCS.Branch = branch
-			p.VCS.Dirty = p.VCS.Dirty || dirty
-			p.VCS.Type = "git"
+
+	currentWorkingDirectory, err := os.Getwd()
+	if err == nil && currentWorkingDirectory != "" {
+		if branch, dirty := findGitBranch(currentWorkingDirectory); branch != "" {
+			payload.VCS.Branch = branch
+			payload.VCS.Dirty = payload.VCS.Dirty || dirty
+			payload.VCS.Type = "git"
 		}
 	}
 }
 
-// findGitBranch looks for a .git directory or worktree pointer starting from startDir.
-func findGitBranch(startDir string) (string, bool) {
-	curr := filepath.Clean(startDir)
+func readBranchFromDirectory(gitDirectory string) string {
+	headFilePath := filepath.Join(gitDirectory, "HEAD")
+	data, err := os.ReadFile(headFilePath)
+	if err != nil {
+		return ""
+	}
+	return parseGitHead(string(data))
+}
+
+func readBranchFromWorktree(gitFilePath, currentDirectory string) string {
+	data, err := os.ReadFile(gitFilePath)
+	if err != nil {
+		return ""
+	}
+	line := strings.TrimSpace(string(data))
+	if !strings.HasPrefix(line, "gitdir:") {
+		return ""
+	}
+	targetDirectory := strings.TrimSpace(strings.TrimPrefix(line, "gitdir:"))
+	if !filepath.IsAbs(targetDirectory) {
+		targetDirectory = filepath.Join(currentDirectory, targetDirectory)
+	}
+	return readBranchFromDirectory(targetDirectory)
+}
+
+func inspectGitPath(gitPath, currentDirectory string) (string, bool) {
+	fileInfo, err := os.Stat(gitPath)
+	if err != nil {
+		return "", false
+	}
+	if fileInfo.IsDir() {
+		branch := readBranchFromDirectory(gitPath)
+		return branch, branch != ""
+	}
+	branch := readBranchFromWorktree(gitPath, currentDirectory)
+	return branch, branch != ""
+}
+
+func findGitBranch(startDirectory string) (string, bool) {
+	currentDirectory := filepath.Clean(startDirectory)
 	for {
-		gitPath := filepath.Join(curr, ".git")
-		fi, err := os.Stat(gitPath)
-		if err == nil {
-			if fi.IsDir() {
-				headFile := filepath.Join(gitPath, "HEAD")
-				if data, err := os.ReadFile(headFile); err == nil {
-					return parseGitHead(string(data)), false
-				}
-			} else {
-				// Worktree or submodule (.git file containing "gitdir: <path>")
-				if data, err := os.ReadFile(gitPath); err == nil {
-					line := strings.TrimSpace(string(data))
-					if strings.HasPrefix(line, "gitdir:") {
-						realGitDir := strings.TrimSpace(strings.TrimPrefix(line, "gitdir:"))
-						if !filepath.IsAbs(realGitDir) {
-							realGitDir = filepath.Join(curr, realGitDir)
-						}
-						headFile := filepath.Join(realGitDir, "HEAD")
-						if hData, err := os.ReadFile(headFile); err == nil {
-							return parseGitHead(string(hData)), false
-						}
-					}
-				}
-			}
+		gitPath := filepath.Join(currentDirectory, ".git")
+		if branch, found := inspectGitPath(gitPath, currentDirectory); found {
+			return branch, false
+		}
+
+		parentDirectory := filepath.Dir(currentDirectory)
+		if parentDirectory == currentDirectory {
 			return "", false
 		}
-
-		parent := filepath.Dir(curr)
-		if parent == curr {
-			break
-		}
-		curr = parent
+		currentDirectory = parentDirectory
 	}
-	return "", false
 }
 
-// parseGitHead extracts the branch name or short commit SHA from HEAD file content.
 func parseGitHead(content string) string {
-	content = strings.TrimSpace(content)
-	if strings.HasPrefix(content, "ref: refs/heads/") {
-		return strings.TrimPrefix(content, "ref: refs/heads/")
+	trimmed := strings.TrimSpace(content)
+	if strings.HasPrefix(trimmed, "ref: refs/heads/") {
+		return strings.TrimPrefix(trimmed, "ref: refs/heads/")
 	}
-	if len(content) >= 7 {
-		return content[:7]
+	if len(trimmed) >= 7 {
+		return trimmed[:7]
 	}
-	return content
+	return trimmed
 }
 
-// ActiveModelGroup identifies whether active model is first-party ("gemini") or third-party ("3p" / Claude / GPT).
-func (p *StatePayload) ActiveModelGroup() string {
-	if p == nil {
+func (payload *StatePayload) ActiveModelGroup() string {
+	if payload == nil {
 		return "gemini"
 	}
-	modelStr := strings.ToLower(p.Model.ID + " " + p.Model.DisplayName)
-	if strings.Contains(modelStr, "claude") || strings.Contains(modelStr, "gpt") ||
-		strings.Contains(modelStr, "opus") || strings.Contains(modelStr, "sonnet") ||
-		strings.Contains(modelStr, "3p") || strings.Contains(modelStr, "anthropic") ||
-		strings.Contains(modelStr, "openai") {
+	modelText := strings.ToLower(payload.Model.ID + " " + payload.Model.DisplayName)
+	isThirdParty := strings.Contains(modelText, "claude") || strings.Contains(modelText, "gpt") ||
+		strings.Contains(modelText, "opus") || strings.Contains(modelText, "sonnet") ||
+		strings.Contains(modelText, "3p") || strings.Contains(modelText, "anthropic") ||
+		strings.Contains(modelText, "openai")
+	if isThirdParty {
 		return "3p"
 	}
 	return "gemini"
 }
 
-// GetWeeklyUsage returns the active weekly limit remaining percentage (0-100) and whether it was found.
-func (p *StatePayload) GetWeeklyUsage() (float64, bool) {
-	if p == nil {
-		return 0, false
-	}
-	if p.WeeklyUsagePercent != nil {
-		return min(100.0, max(0.0, *p.WeeklyUsagePercent)), true
-	}
-	if len(p.RateLimits) > 0 {
-		for _, key := range []string{"seven_day", "7d", "weekly", "week"} {
-			if rl, ok := p.RateLimits[key]; ok {
-				if rl.RemainingPercentage > 0 {
-					return min(100.0, max(0.0, rl.RemainingPercentage)), true
-				}
-				if rl.UsedPercentage > 0 {
-					return min(100.0, max(0.0, 100.0-rl.UsedPercentage)), true
-				}
-			}
+func resolveRateLimitUsage(rateLimits map[string]RateLimit, searchKeys []string) (float64, bool) {
+	for _, searchKey := range searchKeys {
+		rateLimit, exists := rateLimits[searchKey]
+		if !exists {
+			continue
 		}
-	}
-	if len(p.Quota) > 0 {
-		group := p.ActiveModelGroup()
-		var candidateKeys []string
-		if group == "3p" {
-			candidateKeys = []string{"3p-weekly", "3p_weekly", "3p-7d", "3p_7d", "claude-weekly", "claude_weekly", "gpt-weekly", "weekly", "7d"}
-		} else {
-			candidateKeys = []string{"gemini-weekly", "gemini_weekly", "gemini-7d", "gemini_7d", "weekly", "7d"}
+		if rateLimit.RemainingPercentage > 0 {
+			return min(100.0, max(0.0, rateLimit.RemainingPercentage)), true
 		}
-
-		for _, k := range candidateKeys {
-			if q, ok := p.Quota[k]; ok && (q.RemainingFraction > 0 || q.UsedPercentage > 0) {
-				if q.RemainingFraction > 0 {
-					return min(100.0, max(0.0, q.RemainingFraction*100.0)), true
-				}
-				if q.UsedPercentage > 0 {
-					return min(100.0, max(0.0, 100.0-q.UsedPercentage)), true
-				}
-			}
-		}
-
-		// Fuzzy search in quota keys
-		for key, q := range p.Quota {
-			k := strings.ToLower(key)
-			if strings.Contains(k, "week") || strings.Contains(k, "7d") || strings.Contains(k, "seven") {
-				if (group == "gemini" && strings.Contains(k, "gemini")) ||
-					(group == "3p" && (strings.Contains(k, "3p") || strings.Contains(k, "claude") || strings.Contains(k, "gpt"))) {
-					if q.RemainingFraction > 0 {
-						return min(100.0, max(0.0, q.RemainingFraction*100.0)), true
-					}
-					if q.UsedPercentage > 0 {
-						return min(100.0, max(0.0, 100.0-q.UsedPercentage)), true
-					}
-				}
-			}
+		if rateLimit.UsedPercentage > 0 {
+			return min(100.0, max(0.0, 100.0-rateLimit.UsedPercentage)), true
 		}
 	}
 	return 0, false
 }
 
-// GetSessionUsage returns the active 5-hour limit remaining percentage (0-100) and whether it was found.
-func (p *StatePayload) GetSessionUsage() (float64, bool) {
-	if p == nil {
-		return 0, false
+func extractQuotaPercentage(quota QuotaDetail) (float64, bool) {
+	if quota.RemainingFraction > 0 {
+		return min(100.0, max(0.0, quota.RemainingFraction*100.0)), true
 	}
-	if p.SessionUsagePercent != nil {
-		return min(100.0, max(0.0, *p.SessionUsagePercent)), true
+	if quota.UsedPercentage > 0 {
+		return min(100.0, max(0.0, 100.0-quota.UsedPercentage)), true
 	}
-	if len(p.RateLimits) > 0 {
-		for _, key := range []string{"five_hour", "5h", "session", "current"} {
-			if rl, ok := p.RateLimits[key]; ok {
-				if rl.RemainingPercentage > 0 {
-					return min(100.0, max(0.0, rl.RemainingPercentage)), true
-				}
-				if rl.UsedPercentage > 0 {
-					return min(100.0, max(0.0, 100.0-rl.UsedPercentage)), true
-				}
-			}
-		}
-	}
-	if len(p.Quota) > 0 {
-		group := p.ActiveModelGroup()
-		var candidateKeys []string
-		if group == "3p" {
-			candidateKeys = []string{"3p-5h", "3p_5h", "3p", "claude-5h", "claude_5h", "gpt-5h", "gpt_5h", "session", "5h"}
-		} else {
-			candidateKeys = []string{"gemini-5h", "gemini_5h", "gemini", "session", "5h"}
-		}
+	return 0, false
+}
 
-		for _, k := range candidateKeys {
-			if q, ok := p.Quota[k]; ok && (q.RemainingFraction > 0 || q.UsedPercentage > 0) {
-				if q.RemainingFraction > 0 {
-					return min(100.0, max(0.0, q.RemainingFraction*100.0)), true
-				}
-				if q.UsedPercentage > 0 {
-					return min(100.0, max(0.0, 100.0-q.UsedPercentage)), true
-				}
-			}
+func resolveCandidateQuotaUsage(quotaMap map[string]QuotaDetail, candidateKeys []string) (float64, bool) {
+	for _, candidateKey := range candidateKeys {
+		quota, exists := quotaMap[candidateKey]
+		if !exists {
+			continue
 		}
-
-		// Fuzzy search in quota keys
-		for key, q := range p.Quota {
-			k := strings.ToLower(key)
-			if strings.Contains(k, "week") || strings.Contains(k, "7d") || strings.Contains(k, "seven") {
-				continue
-			}
-			if (group == "gemini" && (strings.Contains(k, "gemini") || strings.Contains(k, "flash") || strings.Contains(k, "pro"))) ||
-				(group == "3p" && (strings.Contains(k, "3p") || strings.Contains(k, "claude") || strings.Contains(k, "gpt") || strings.Contains(k, "sonnet") || strings.Contains(k, "opus"))) {
-				if q.RemainingFraction > 0 {
-					return min(100.0, max(0.0, q.RemainingFraction*100.0)), true
-				}
-				if q.UsedPercentage > 0 {
-					return min(100.0, max(0.0, 100.0-q.UsedPercentage)), true
-				}
-			}
+		if percentage, found := extractQuotaPercentage(quota); found {
+			return percentage, true
 		}
 	}
 	return 0, false
+}
+
+func matchesModelGroup(key, group string) bool {
+	if group == "gemini" {
+		return strings.Contains(key, "gemini") || strings.Contains(key, "flash") || strings.Contains(key, "pro")
+	}
+	return strings.Contains(key, "3p") || strings.Contains(key, "claude") || strings.Contains(key, "gpt") ||
+		strings.Contains(key, "sonnet") || strings.Contains(key, "opus")
+}
+
+func resolveFuzzyQuotaUsage(quotaMap map[string]QuotaDetail, group string, isMatchingTimeWindow func(string) bool) (float64, bool) {
+	for key, quota := range quotaMap {
+		keyLower := strings.ToLower(key)
+		if !isMatchingTimeWindow(keyLower) || !matchesModelGroup(keyLower, group) {
+			continue
+		}
+		if percentage, found := extractQuotaPercentage(quota); found {
+			return percentage, true
+		}
+	}
+	return 0, false
+}
+
+func (payload *StatePayload) GetWeeklyUsage() (float64, bool) {
+	if payload == nil {
+		return 0, false
+	}
+	if payload.WeeklyUsagePercent != nil {
+		return min(100.0, max(0.0, *payload.WeeklyUsagePercent)), true
+	}
+	if percentage, found := resolveRateLimitUsage(payload.RateLimits, []string{"seven_day", "7d", "weekly", "week"}); found {
+		return percentage, true
+	}
+	if len(payload.Quota) == 0 {
+		return 0, false
+	}
+
+	group := payload.ActiveModelGroup()
+	candidateKeys := []string{"gemini-weekly", "gemini_weekly", "gemini-7d", "gemini_7d", "weekly", "7d"}
+	if group == "3p" {
+		candidateKeys = []string{"3p-weekly", "3p_weekly", "3p-7d", "3p_7d", "claude-weekly", "claude_weekly", "gpt-weekly", "weekly", "7d"}
+	}
+	if percentage, found := resolveCandidateQuotaUsage(payload.Quota, candidateKeys); found {
+		return percentage, true
+	}
+
+	return resolveFuzzyQuotaUsage(payload.Quota, group, func(key string) bool {
+		return strings.Contains(key, "week") || strings.Contains(key, "7d") || strings.Contains(key, "seven")
+	})
+}
+
+func (payload *StatePayload) GetSessionUsage() (float64, bool) {
+	if payload == nil {
+		return 0, false
+	}
+	if payload.SessionUsagePercent != nil {
+		return min(100.0, max(0.0, *payload.SessionUsagePercent)), true
+	}
+	if percentage, found := resolveRateLimitUsage(payload.RateLimits, []string{"five_hour", "5h", "session", "current"}); found {
+		return percentage, true
+	}
+	if len(payload.Quota) == 0 {
+		return 0, false
+	}
+
+	group := payload.ActiveModelGroup()
+	candidateKeys := []string{"gemini-5h", "gemini_5h", "gemini", "session", "5h"}
+	if group == "3p" {
+		candidateKeys = []string{"3p-5h", "3p_5h", "3p", "claude-5h", "claude_5h", "gpt-5h", "gpt_5h", "session", "5h"}
+	}
+	if percentage, found := resolveCandidateQuotaUsage(payload.Quota, candidateKeys); found {
+		return percentage, true
+	}
+
+	return resolveFuzzyQuotaUsage(payload.Quota, group, func(key string) bool {
+		hasWeek := strings.Contains(key, "week") || strings.Contains(key, "7d") || strings.Contains(key, "seven")
+		return !hasWeek
+	})
 }

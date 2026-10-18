@@ -16,22 +16,33 @@ var (
 const MaxConfigFileSize = 1024 * 1024
 
 type IconsConfig struct {
-	Idle      string `json:"idle,omitempty"`
-	Thinking  string `json:"thinking,omitempty"`
-	Working   string `json:"working,omitempty"`
-	Tool      string `json:"tool,omitempty"`
-	Init      string `json:"init,omitempty"`
-	Branch    string `json:"branch,omitempty"`
-	Dirty     string `json:"dirty,omitempty"`
-	Model     string `json:"model,omitempty"`
-	Context   string `json:"context,omitempty"`
-	Artifacts string `json:"artifacts,omitempty"`
-	Subagents string `json:"subagents,omitempty"`
-	Tasks     string `json:"tasks,omitempty"`
-	Sandbox   string `json:"sandbox,omitempty"`
-	Vim       string `json:"vim,omitempty"`
-	Weekly    string `json:"weekly,omitempty"`
-	Session   string `json:"session,omitempty"`
+	Idle             string `json:"idle,omitempty"`
+	Thinking         string `json:"thinking,omitempty"`
+	Working          string `json:"working,omitempty"`
+	Tool             string `json:"tool,omitempty"`
+	Init             string `json:"init,omitempty"`
+	WaitingInput     string `json:"waiting_input,omitempty"`
+	WaitingApproval  string `json:"waiting_approval,omitempty"`
+	WaitingDependent string `json:"waiting_dependent,omitempty"`
+	Streaming        string `json:"streaming,omitempty"`
+	Compacting       string `json:"compacting,omitempty"`
+	Error            string `json:"error,omitempty"`
+	Branch           string `json:"branch,omitempty"`
+	Dirty            string `json:"dirty,omitempty"`
+	Model            string `json:"model,omitempty"`
+	Context          string `json:"context,omitempty"`
+	Artifacts        string `json:"artifacts,omitempty"`
+	Subagents        string `json:"subagents,omitempty"`
+	Tasks            string `json:"tasks,omitempty"`
+	Terminals        string `json:"terminals,omitempty"`
+	MCP              string `json:"mcp,omitempty"`
+	Skills           string `json:"skills,omitempty"`
+	Plugins          string `json:"plugins,omitempty"`
+	Attention        string `json:"attention,omitempty"`
+	Sandbox          string `json:"sandbox,omitempty"`
+	Vim              string `json:"vim,omitempty"`
+	Weekly           string `json:"weekly,omitempty"`
+	Session          string `json:"session,omitempty"`
 }
 
 type ThemeConfig struct {
@@ -43,12 +54,17 @@ type ThemeConfig struct {
 type ModulesConfig struct {
 	VimMode        bool `json:"vim_mode"`
 	AgentState     bool `json:"agent_state"`
+	AttentionBadge bool `json:"attention_badge"`
 	ModelName      bool `json:"model_name"`
 	GitBranch      bool `json:"git_branch"`
 	ContextBar     bool `json:"context_bar"`
 	ArtifactsCount bool `json:"artifacts_count"`
 	SubagentsCount bool `json:"subagents_count"`
 	TasksCount     bool `json:"tasks_count"`
+	TerminalCount  bool `json:"terminal_count"`
+	MCPCount       bool `json:"mcp_count"`
+	SkillsCount    bool `json:"skills_count"`
+	PluginsCount   bool `json:"plugins_count"`
 	SandboxBadge   bool `json:"sandbox_badge"`
 	SessionUsage   bool `json:"session_usage"`
 	WeeklyUsage    bool `json:"weekly_usage"`
@@ -84,33 +100,49 @@ func DefaultConfig() *Config {
 			Palette: "default",
 			IconSet: "nerd-fonts",
 			Icons: IconsConfig{
-				Idle:      "󰚩",
-				Thinking:  "󰘦",
-				Working:   "󱐋",
-				Tool:      "󰘳",
-				Init:      "󰑮",
-				Branch:    "",
-				Dirty:     "●",
-				Model:     "󰧑",
-				Context:   "󰍛",
-				Artifacts: "󰈙",
-				Subagents: "󰮝",
-				Tasks:     "󰒋",
-				Sandbox:   "󰌾",
-				Vim:       "",
-				Weekly:    "󰃭",
-				Session:   "󰥔",
+				Idle:             "󰚩",
+				Thinking:         "󰘦",
+				Working:          "󱐋",
+				Tool:             "󰘳",
+				Init:             "󰑮",
+				WaitingInput:     "󰭻",
+				WaitingApproval:  "󱅝",
+				WaitingDependent: "󱍸",
+				Streaming:        "󰐍",
+				Compacting:       "󰘚",
+				Error:            "󰅚",
+				Branch:           "",
+				Dirty:            "●",
+				Model:            "󰧑",
+				Context:          "󰍛",
+				Artifacts:        "󰈙",
+				Subagents:        "󰮝",
+				Tasks:            "󰒋",
+				Terminals:        "󰆍",
+				MCP:              "󱘖",
+				Skills:           "󰑬",
+				Plugins:          "󰏖",
+				Attention:        "󱅝",
+				Sandbox:          "󰌾",
+				Vim:              "",
+				Weekly:           "󰃭",
+				Session:          "󰥔",
 			},
 		},
 		Modules: ModulesConfig{
 			VimMode:        true,
 			AgentState:     true,
+			AttentionBadge: true,
 			ModelName:      true,
 			GitBranch:      true,
 			ContextBar:     true,
 			ArtifactsCount: true,
 			SubagentsCount: true,
 			TasksCount:     true,
+			TerminalCount:  false,
+			MCPCount:       false,
+			SkillsCount:    false,
+			PluginsCount:   false,
 			SandboxBadge:   true,
 			SessionUsage:   true,
 			WeeklyUsage:    true,
@@ -193,21 +225,21 @@ func Load(explicitPath string) (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) validateAndSanitize() {
-	if c.Layout.WideBreakpoint <= 0 {
-		c.Layout.WideBreakpoint = 120
+func (config *Config) validateAndSanitize() {
+	if config.Layout.WideBreakpoint <= 0 {
+		config.Layout.WideBreakpoint = 120
 	}
-	if c.Layout.StandardBreakpoint <= 0 {
-		c.Layout.StandardBreakpoint = 80
+	if config.Layout.StandardBreakpoint <= 0 {
+		config.Layout.StandardBreakpoint = 80
 	}
-	if c.ContextBar.Length <= 0 {
-		c.ContextBar.Length = 10
+	if config.ContextBar.Length <= 0 {
+		config.ContextBar.Length = 10
 	}
-	if c.ContextBar.WarningThreshold <= 0 {
-		c.ContextBar.WarningThreshold = 75.0
+	if config.ContextBar.WarningThreshold <= 0 {
+		config.ContextBar.WarningThreshold = 75.0
 	}
-	if c.ContextBar.CriticalThreshold <= 0 {
-		c.ContextBar.CriticalThreshold = 90.0
+	if config.ContextBar.CriticalThreshold <= 0 {
+		config.ContextBar.CriticalThreshold = 90.0
 	}
 }
 
@@ -305,6 +337,28 @@ func SetProperty(targetPath string, key string, val string) (string, error) {
 		cfg.Theme.Icons.Weekly = val
 	case "theme.icons.session", "icons.session":
 		cfg.Theme.Icons.Session = val
+	case "theme.icons.waiting_input", "icons.waiting_input":
+		cfg.Theme.Icons.WaitingInput = val
+	case "theme.icons.waiting_approval", "icons.waiting_approval":
+		cfg.Theme.Icons.WaitingApproval = val
+	case "theme.icons.waiting_dependent", "icons.waiting_dependent":
+		cfg.Theme.Icons.WaitingDependent = val
+	case "theme.icons.streaming", "icons.streaming":
+		cfg.Theme.Icons.Streaming = val
+	case "theme.icons.compacting", "icons.compacting":
+		cfg.Theme.Icons.Compacting = val
+	case "theme.icons.error", "icons.error":
+		cfg.Theme.Icons.Error = val
+	case "theme.icons.terminal", "icons.terminal":
+		cfg.Theme.Icons.Terminal = val
+	case "theme.icons.mcp", "icons.mcp":
+		cfg.Theme.Icons.MCP = val
+	case "theme.icons.skill", "icons.skill":
+		cfg.Theme.Icons.Skill = val
+	case "theme.icons.plugin", "icons.plugin":
+		cfg.Theme.Icons.Plugin = val
+	case "theme.icons.attention", "icons.attention":
+		cfg.Theme.Icons.Attention = val
 
 	case "modules.vim_mode", "vim_mode":
 		cfg.Modules.VimMode = parseBool(val)
@@ -328,6 +382,16 @@ func SetProperty(targetPath string, key string, val string) (string, error) {
 		cfg.Modules.SessionUsage = parseBool(val)
 	case "modules.weekly_usage", "weekly_usage":
 		cfg.Modules.WeeklyUsage = parseBool(val)
+	case "modules.attention_badge", "attention_badge":
+		cfg.Modules.AttentionBadge = parseBool(val)
+	case "modules.mcp_count", "mcp_count":
+		cfg.Modules.MCPCount = parseBool(val)
+	case "modules.skills_count", "skills_count":
+		cfg.Modules.SkillsCount = parseBool(val)
+	case "modules.plugins_count", "plugins_count":
+		cfg.Modules.PluginsCount = parseBool(val)
+	case "modules.terminal_count", "terminal_count":
+		cfg.Modules.TerminalCount = parseBool(val)
 
 	case "layout.style", "style":
 		cfg.Layout.Style = val
@@ -364,7 +428,7 @@ func SetProperty(targetPath string, key string, val string) (string, error) {
 	return targetPath, nil
 }
 
-func parseBool(val string) bool {
-	v := strings.ToLower(strings.TrimSpace(val))
-	return v == "true" || v == "1" || v == "yes" || v == "on" || v == "enable" || v == "enabled"
+func parseBool(valueString string) bool {
+	normalizedValue := strings.ToLower(strings.TrimSpace(valueString))
+	return normalizedValue == "true" || normalizedValue == "1" || normalizedValue == "yes" || normalizedValue == "on" || normalizedValue == "enable" || normalizedValue == "enabled"
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/joaco/antigravity-statusline/internal/theme"
 )
 
-func RenderModelBadge(model payload.ModelInfo, executionMode string, p theme.Palette, icons config.IconsConfig) string {
-	name := strings.TrimSpace(cmp.Or(payload.Sanitize(model.DisplayName), payload.Sanitize(model.ID)))
-	if name == "" {
+func RenderModelBadge(model payload.ModelInfo, executionMode string, palette theme.Palette, icons config.IconsConfig) string {
+	modelName := strings.TrimSpace(cmp.Or(payload.Sanitize(model.DisplayName), payload.Sanitize(model.ID)))
+	if modelName == "" {
 		return ""
 	}
 
@@ -20,18 +20,18 @@ func RenderModelBadge(model payload.ModelInfo, executionMode string, p theme.Pal
 		icon = icons.Model
 	}
 
-	modelText := theme.Style(p.Model, icon+" "+name)
+	modelText := theme.Style(palette.Model, icon+" "+modelName)
 
-	mode := strings.ToUpper(strings.TrimSpace(payload.Sanitize(executionMode)))
-	if mode == "" || mode == "DEFAULT" {
+	sanitizedMode := strings.ToUpper(strings.TrimSpace(payload.Sanitize(executionMode)))
+	if sanitizedMode == "" || sanitizedMode == "DEFAULT" {
 		return modelText
 	}
 
-	modeTag := theme.Style(p.ModelMode, "["+mode+"]")
-	var b strings.Builder
-	b.Grow(len(modelText) + 1 + len(modeTag))
-	b.WriteString(modelText)
-	b.WriteByte(' ')
-	b.WriteString(modeTag)
-	return b.String()
+	modeTag := theme.Style(palette.ModelMode, "["+sanitizedMode+"]")
+	var builder strings.Builder
+	builder.Grow(len(modelText) + 1 + len(modeTag))
+	builder.WriteString(modelText)
+	builder.WriteByte(' ')
+	builder.WriteString(modeTag)
+	return builder.String()
 }

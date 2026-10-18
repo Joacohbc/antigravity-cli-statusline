@@ -1,0 +1,75 @@
+{
+  "cwd": "/home/developer/workspace/antigravity-cli",
+  "session_id": "sess-modern-123456",
+  "conversation_id": "conv-modern-654321",
+  "transcript_path": "/home/developer/.gemini/antigravity-cli/brain/conv-modern-654321/transcript.jsonl",
+  "model": {
+    "id": "gemini-3.7-pro",
+    "display_name": "Gemini 3.7 Pro"
+  },
+  "workspace": {
+    "current_dir": "/home/developer/workspace/antigravity-cli",
+    "project_dir": "/home/developer/workspace"
+  },
+  "version": "2.6.0",
+  "context_window": {
+    "total_input_tokens": 177000,
+    "total_output_tokens": 12000,
+    "context_window_size": 200000,
+    "used_percentage": 88.5,
+    "remaining_percentage": 11.5,
+    "current_usage": {
+      "input_tokens": 6000,
+      "output_tokens": 1500,
+      "cache_creation_input_tokens": 2000,
+      "cache_read_input_tokens": 8000
+    }
+  },
+  "exceeds_200k_tokens": false,
+  "product": "Antigravity CLI",
+  "quota": {
+    "gemini": {
+      "remaining_fraction": 0.55,
+      "reset_time": "2026-10-18T20:00:00Z",
+      "reset_in_seconds": 7200
+    }
+  },
+  "agent_state": "waiting_for_approval",
+  "vcs": {
+    "type": "git",
+    "branch": "feat/modern-agy-statusline",
+    "client": "git-cli",
+    "dirty": false
+  },
+  "sandbox": {
+    "enabled": true,
+    "allow_network": true
+  },
+  "artifact_count": 5,
+  "plan_tier": "pro",
+  "email": "user@example.com",
+  "pending_input_count": 1,
+  "tool_confirmation_pending": true,
+  "task_count": 3,
+  "subagents": [
+    {
+      "role": "Codebase Researcher",
+      "type": "research",
+      "state": "waiting_for_message"
+    },
+    {
+      "role": "Database Debugger",
+      "type": "self",
+      "state": "running"
+    }
+  ],
+  "terminal_count": 2,
+  "mcp_count": 3,
+  "skills_count": 6,
+  "plugins_count": 2,
+  "terminal_width": 140,
+  "execution_mode": "BOOST",
+  "vim": {
+    "mode": "NORMAL"
+  }
+}
