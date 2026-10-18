@@ -28,7 +28,7 @@ func NewPreviewPayload(widthOverride int) *payload.StatePayload {
 			CurrentDir: "/home/developer/workspace/antigravity-cli",
 			ProjectDir: "/home/developer/workspace",
 		},
-		Version: "v1.0.0",
+		Version: "v1.1.0",
 		ContextWindow: payload.ContextWindowInfo{
 			TotalInputTokens:    85000,
 			TotalOutputTokens:   12000,

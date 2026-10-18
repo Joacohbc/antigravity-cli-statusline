@@ -1,8 +1,10 @@
 #!/usr/bin/env sh
-# Antigravity CLI Status Line installer (Linux / macOS / Windows)
+# Antigravity CLI Status Line installer & updater (Linux / macOS / Windows)
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | sh
-#   curl -fsSL .../install.sh | VERSION=v1.0.0 sh
+#   Install latest:
+#     curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | sh
+#   Update or install specific version:
+#     curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | VERSION=v1.1.0 sh
 set -eu
 
 REPO="${REPO:-Joacohbc/antigravity-cli-statusline}"
@@ -49,7 +51,16 @@ command -v curl >/dev/null 2>&1 || err "curl is required to download statusline"
 mkdir -p "$INSTALL_DIR"
 tmp_path="${binary_dest}.download"
 
-info "Downloading $asset ($VERSION)"
+is_update=0
+if [ -f "$binary_dest" ]; then
+  is_update=1
+  current_version=$("$binary_dest" version 2>/dev/null || echo "installed")
+  info "Existing installation detected (${current_version})"
+  info "Updating statusline to ${VERSION} (${asset})..."
+else
+  info "Installing statusline ${VERSION} (${asset})..."
+fi
+
 curl -fSL --progress-bar -o "$tmp_path" "$url" || err "download failed: $url"
 
 # Verify the published sha256 before trusting the binary
@@ -75,17 +86,33 @@ if curl -fsSL -o "$sum_path" "$sum_url" 2>/dev/null; then
   rm -f "$sum_path"
 fi
 
+# Atomic replacement with safe backup
+if [ "$is_update" = "1" ]; then
+  cp -f "$binary_dest" "${binary_dest}.bak" 2>/dev/null || true
+fi
+
 mv -f "$tmp_path" "$binary_dest"
 chmod +x "$binary_dest"
+rm -f "${binary_dest}.bak" 2>/dev/null || true
 
-info "Configuring Antigravity CLI (${SETTINGS_FILE})..."
+# Antigravity CLI configuration
 if [ -f "${SETTINGS_FILE}" ]; then
+  already_configured=0
   if command -v jq >/dev/null 2>&1; then
-    TEMP_SETTINGS=$(mktemp "${SETTINGS_FILE}.tmp.XXXXXX")
-    jq --arg cmd "${binary_dest}" '.statusLine = {"type": "command", "command": $cmd, "enabled": true}' "${SETTINGS_FILE}" > "${TEMP_SETTINGS}"
-    mv -f "${TEMP_SETTINGS}" "${SETTINGS_FILE}"
+    existing_cmd=$(jq -r '.statusLine.command // empty' "${SETTINGS_FILE}" 2>/dev/null || true)
+    existing_enabled=$(jq -r '.statusLine.enabled // empty' "${SETTINGS_FILE}" 2>/dev/null || true)
+    if [ "$existing_cmd" = "$binary_dest" ] && [ "$existing_enabled" = "true" ]; then
+      already_configured=1
+    else
+      TEMP_SETTINGS=$(mktemp "${SETTINGS_FILE}.tmp.XXXXXX")
+      jq --arg cmd "${binary_dest}" '.statusLine = {"type": "command", "command": $cmd, "enabled": true}' "${SETTINGS_FILE}" > "${TEMP_SETTINGS}"
+      mv -f "${TEMP_SETTINGS}" "${SETTINGS_FILE}"
+    fi
+  fi
+  if [ "$already_configured" = "1" ]; then
+    info "Antigravity CLI settings already verified (${SETTINGS_FILE})"
   else
-    printf 'Notice: jq not found. Ensure %s has statusLine set to %s\n' "$SETTINGS_FILE" "$binary_dest"
+    info "Updated Antigravity CLI settings (${SETTINGS_FILE})"
   fi
 else
   cat <<EOF > "${SETTINGS_FILE}"
@@ -97,6 +124,12 @@ else
   }
 }
 EOF
+  info "Created Antigravity CLI settings (${SETTINGS_FILE})"
 fi
 
-info "Antigravity Status Line installed successfully to ${binary_dest}"
+active_version=$("$binary_dest" version 2>/dev/null || echo "$VERSION")
+if [ "$is_update" = "1" ]; then
+  info "Antigravity Status Line successfully updated to ${active_version}!"
+else
+  info "Antigravity Status Line successfully installed: ${active_version} (${binary_dest})"
+fi

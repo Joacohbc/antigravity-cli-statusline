@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	Version = "antigravity-cli-statusline v1.0.0 (Go 1.22+)"
+	Version = "antigravity-cli-statusline v1.1.0 (Go 1.22+)"
 
 	ExitSuccess = 0
 	ExitError   = 1
@@ -38,6 +39,7 @@ AVAILABLE COMMANDS:
   themes      List all available color theme palettes
   config      Manage statusline user configuration (init, show)
   install     Install binary to ~/.gemini/antigravity-cli and configure settings
+  update      Update statusline to latest or specified release version
   version     Print version information
   completion  Generate shell autocompletion scripts (bash, zsh, fish, powershell)
 
@@ -400,8 +402,26 @@ func (r *Runner) Execute() int {
 		},
 	}
 
+	var targetUpdateVersion string
+	updateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update statusline to latest or specified release version",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			version := targetUpdateVersion
+			if version == "" {
+				version = "latest"
+			}
+			script := fmt.Sprintf("curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | VERSION=%s sh", version)
+			execCmd := exec.Command("sh", "-c", script)
+			execCmd.Stdout = r.Out
+			execCmd.Stderr = r.Err
+			return execCmd.Run()
+		},
+	}
+	updateCmd.Flags().StringVarP(&targetUpdateVersion, "version", "v", "", "Target version to update to (e.g. v1.1.0)")
+
 	configCmd.AddCommand(configInitCmd, configShowCmd, configSetCmd, configPathCmd)
-	rootCmd.AddCommand(previewCmd, themesCmd, versionCmd, configCmd, NewInstallCmd(r.Out, r.Err))
+	rootCmd.AddCommand(previewCmd, themesCmd, versionCmd, configCmd, NewInstallCmd(r.Out, r.Err), updateCmd)
 
 	normalizedArgs := make([]string, len(r.Args))
 	for i, arg := range r.Args {

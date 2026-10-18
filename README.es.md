@@ -33,6 +33,25 @@ curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline
 
 ---
 
+## 🔄 Actualizar statusline
+
+Si ya tenías `statusline` instalado, la actualización es automática y conserva intacta toda tu configuración:
+
+### Opción 1: Desde la propia CLI (Más rápido)
+```bash
+statusline update
+# O fijar una versión específica:
+statusline update --version v1.1.0
+```
+
+### Opción 2: Reejecutar el instalador
+```bash
+curl -fsSL https://raw.githubusercontent.com/Joacohbc/antigravity-cli-statusline/main/install.sh | sh
+```
+El instalador detecta automáticamente la versión instalada previa, verifica el checksum SHA256 del nuevo binario, respalda la versión anterior y no altera tu configuración personalizada en `settings.json`.
+
+---
+
 ## 📸 Previsualización
 
 ### Modo Wide (1 sola línea)

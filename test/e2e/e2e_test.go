@@ -282,7 +282,7 @@ func TestTier1_Standalone_Version(t *testing.T) {
 				t.Fatalf("expected exit code 0 for version flag %s, got %d", flag, exitCode)
 			}
 
-			expectedVersion := "antigravity-cli-statusline v1.0.0 (Go 1.22+)"
+			expectedVersion := "antigravity-cli-statusline v1.1.0 (Go 1.22+)"
 			if strings.TrimSpace(stdout) != expectedVersion {
 				t.Errorf("expected version %q, got %q", expectedVersion, strings.TrimSpace(stdout))
 			}
